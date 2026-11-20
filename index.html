@@ -1,0 +1,3153 @@
+<!DOCTYPE html>
+<html lang="ja" class="antialiased">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Deck — Personal Web App Launcher</title>
+
+  <!-- Fonts: Inter, Noto Sans JP, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans JP"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+          colors: {
+            surface: {
+              light: '#ffffff',
+              dark: '#121215',
+            },
+            canvas: {
+              light: '#f7f7f8',
+              dark: '#09090b',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Theme initialization before paint to prevent flicker -->
+  <script>
+    (function () {
+      try {
+        const stored = localStorage.getItem('deck_theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (stored === 'dark' || (!stored && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {
+        // Fallback silently
+      }
+    })();
+  </script>
+
+  <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      overscroll-behavior-y: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(113, 113, 122, 0.25);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(113, 113, 122, 0.45);
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    #player-hud {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: opacity 0.2s ease, transform 0.15s ease;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.99);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .animate-modal {
+      animation: modalFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes toastSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-toast {
+      animation: toastSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+
+<body class="bg-canvas-light dark:bg-canvas-dark text-zinc-900 dark:text-zinc-100 font-sans selection:bg-zinc-900 selection:text-white dark:selection:bg-zinc-100 dark:selection:text-zinc-900 transition-colors duration-200">
+
+  <!-- Main Shell -->
+  <div id="app-shell" class="min-h-[100dvh] flex flex-col">
+
+    <!-- Sticky Header -->
+    <header class="sticky top-0 z-30 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-canvas-light/85 dark:bg-canvas-dark/85 backdrop-blur-md" style="padding-top: var(--safe-top);">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
+        <!-- Brand -->
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 flex items-center justify-center shadow-sm">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            </svg>
+          </div>
+          <div class="flex flex-col">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold tracking-tight leading-none">Deck</span>
+              <span id="sync-status-pill" class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+                <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+                <span id="sync-status-text">INIT</span>
+              </span>
+            </div>
+            <span class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 hidden sm:inline">Web App Vault</span>
+          </div>
+        </div>
+
+        <!-- Search Input (Desktop & Tablet) -->
+        <div class="flex-1 max-w-md hidden md:block">
+          <div class="relative">
+            <svg class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </svg>
+            <input
+              id="search-input-desktop"
+              type="text"
+              placeholder="アプリ名・タグ・ファイル名で検索..."
+              class="w-full h-9 pl-9 pr-12 text-sm rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-zinc-100/15 focus:border-zinc-400 dark:focus:border-zinc-600 transition"
+            />
+            <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-0.5 pointer-events-none">/</kbd>
+          </div>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="flex items-center gap-1 sm:gap-1.5">
+          <!-- GitHub Sync Button -->
+          <button
+            id="btn-sync-github"
+            type="button"
+            title="GitHubリポジトリと再同期"
+            class="h-9 px-2.5 sm:px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-1.5 text-xs font-mono font-medium"
+          >
+            <svg id="icon-sync-spinner" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 16h5v5"></path>
+            </svg>
+            <span class="hidden sm:inline">SYNC</span>
+          </button>
+
+          <!-- Reference / Guide Modal -->
+          <button
+            id="btn-open-guide"
+            type="button"
+            title="Reference / Guide"
+            class="w-9 sm:w-auto sm:px-2.5 h-9 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/70 transition flex items-center justify-center gap-1.5 text-xs font-medium"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4"></path>
+              <path d="M12 8h.01"></path>
+            </svg>
+            <span class="hidden lg:inline">Guide</span>
+          </button>
+
+          <!-- Backup / Restore -->
+          <button
+            id="btn-open-backup"
+            type="button"
+            title="バックアップ・復元"
+            class="w-9 sm:w-auto sm:px-2.5 h-9 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/70 transition flex items-center justify-center gap-1.5 text-xs font-medium"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span class="hidden lg:inline">データ管理</span>
+          </button>
+
+          <!-- Theme Toggle -->
+          <button
+            id="btn-toggle-theme"
+            type="button"
+            title="テーマ切り替え"
+            class="w-9 h-9 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/70 transition flex items-center justify-center"
+          >
+            <svg class="w-4 h-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2"></path>
+              <path d="M12 20v2"></path>
+              <path d="m4.93 4.93 1.41 1.41"></path>
+              <path d="m17.66 17.66 1.41 1.41"></path>
+              <path d="M2 12h2"></path>
+              <path d="M20 12h2"></path>
+              <path d="m6.34 17.66-1.41 1.41"></path>
+              <path d="m19.07 4.93-1.41 1.41"></path>
+            </svg>
+            <svg class="w-4 h-4 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+            </svg>
+          </button>
+
+          <!-- Add New Local App -->
+          <button
+            id="btn-new-app"
+            type="button"
+            class="h-9 px-3 sm:px-3.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-[0.98] transition flex items-center gap-1.5 text-xs sm:text-sm font-medium shadow-sm"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span class="hidden sm:inline">新規追加</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Search & Compact Status Row -->
+      <div class="px-4 pb-3 md:hidden space-y-2">
+        <div class="relative">
+          <svg class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input
+            id="search-input-mobile"
+            type="text"
+            placeholder="アプリ名・タグ・ファイル名で検索..."
+            class="w-full h-10 pl-9 pr-4 text-sm rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition"
+          />
+        </div>
+        <div id="sync-status-mobile" class="flex items-center justify-between text-[10px] font-mono text-zinc-500 dark:text-zinc-400 sm:hidden">
+          <span id="sync-status-mobile-text">SYNC: INIT</span>
+          <span id="sync-time-mobile-text"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7 flex flex-col gap-5" style="padding-bottom: calc(2.5rem + var(--safe-bottom));">
+
+      <!-- Toolbar: Tags, Sort, View Mode, Stats -->
+      <section class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <!-- Category / Tag Filter Pills -->
+        <div id="tag-filter-bar" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Right Controls -->
+        <div class="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+          <span id="storage-stats" class="text-xs text-zinc-500 dark:text-zinc-400 font-mono mr-1">0 apps</span>
+
+          <!-- Sort Select -->
+          <div class="relative">
+            <select
+              id="sort-select"
+              aria-label="並び替え"
+              class="h-8 pl-2.5 pr-7 text-xs font-medium rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 appearance-none cursor-pointer"
+            >
+              <option value="recent">最近起動した順</option>
+              <option value="updated">更新日時順</option>
+              <option value="name">名前順</option>
+              <option value="created">登録が新しい順</option>
+            </select>
+            <svg class="w-3.5 h-3.5 text-zinc-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </div>
+
+          <!-- View Switcher -->
+          <div class="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5">
+            <button
+              id="btn-view-grid"
+              type="button"
+              title="グリッド表示"
+              class="w-7 h-7 rounded-md flex items-center justify-center transition"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              </svg>
+            </button>
+            <button
+              id="btn-view-list"
+              type="button"
+              title="リスト表示"
+              class="w-7 h-7 rounded-md flex items-center justify-center transition"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- App Grid / List Container -->
+      <section id="app-list-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <!-- Dynamically rendered cards -->
+      </section>
+
+      <!-- Empty State -->
+      <section id="empty-state" class="hidden flex-1 flex flex-col items-center justify-center text-center py-16 px-4 border border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl bg-white/50 dark:bg-zinc-900/30">
+        <div class="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 mb-4">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+        </div>
+        <h2 id="empty-state-title" class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">表示できるアプリがありません</h2>
+        <p id="empty-state-desc" class="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-xs leading-relaxed">
+          「SYNC」でGitHubリポジトリから取得するか、「新規追加」または.htmlファイルのドロップでローカル登録できます。
+        </p>
+        <button
+          id="btn-empty-add"
+          type="button"
+          class="mt-5 h-9 px-4 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 text-xs font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition"
+        >
+          アプリをローカル登録する
+        </button>
+      </section>
+
+      <!-- Subtle Drop Hint Footer -->
+      <footer class="mt-auto pt-6 border-t border-zinc-200/70 dark:border-zinc-800/70 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+        <span>HTMLファイルをウィンドウにドラッグ＆ドロップして直接登録できます</span>
+        <div class="flex items-center gap-3 font-mono">
+          <span id="footer-sync-meta">Repo: MSY-hub-TEN/my-apps</span>
+          <span class="opacity-40">|</span>
+          <span id="storage-engine-badge">Storage: IndexedDB</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Global Drag & Drop Overlay -->
+  <div id="drop-overlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-6 pointer-events-none">
+    <div class="max-w-md w-full rounded-2xl border-2 border-dashed border-zinc-400 dark:border-zinc-500 bg-white dark:bg-zinc-900 p-8 text-center shadow-2xl">
+      <div class="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 mx-auto mb-3 flex items-center justify-center text-zinc-700 dark:text-zinc-200">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+      </div>
+      <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">ファイルをドロップして取り込む</p>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">.html ファイルは新規登録画面へ、.json ファイルはバックアップ復元へ進みます</p>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- Fullscreen App Player Overlay                                       -->
+  <!-- =================================================================== -->
+  <div id="player-overlay" class="fixed inset-0 z-50 hidden bg-white dark:bg-black">
+    <iframe
+      id="player-frame"
+      title="Running Application"
+      class="w-full h-full border-0 block bg-white"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads allow-pointer-lock"
+      allow="autoplay; fullscreen; clipboard-read; clipboard-write; microphone; camera; midi"
+    ></iframe>
+
+    <!-- Translucent Draggable Floating Return Bar -->
+    <div
+      id="player-hud"
+      class="fixed z-50 flex items-center gap-0.5 p-1 rounded-full bg-zinc-950/65 hover:bg-zinc-950/90 text-white backdrop-blur-md border border-white/15 shadow-lg opacity-55 hover:opacity-100 focus-within:opacity-100"
+      style="top: calc(12px + var(--safe-top)); right: 12px;"
+    >
+      <div
+        id="hud-drag-handle"
+        title="ドラッグして位置を移動"
+        class="w-7 h-8 flex items-center justify-center cursor-grab active:cursor-grabbing text-zinc-400 hover:text-white rounded-full"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="6" r="1.6"></circle>
+          <circle cx="15" cy="6" r="1.6"></circle>
+          <circle cx="9" cy="12" r="1.6"></circle>
+          <circle cx="15" cy="12" r="1.6"></circle>
+          <circle cx="9" cy="18" r="1.6"></circle>
+          <circle cx="15" cy="18" r="1.6"></circle>
+        </svg>
+      </div>
+
+      <button
+        id="btn-player-back"
+        type="button"
+        class="h-8 px-2.5 rounded-full hover:bg-white/15 active:bg-white/25 transition flex items-center gap-1.5 text-xs font-medium tracking-tight whitespace-nowrap"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"></path>
+        </svg>
+        <span>一覧へ戻る</span>
+      </button>
+
+      <div class="w-px h-4 bg-white/15 mx-0.5"></div>
+
+      <button
+        id="btn-hud-more"
+        type="button"
+        title="プレイヤーメニュー"
+        class="w-8 h-8 rounded-full hover:bg-white/15 active:bg-white/25 transition flex items-center justify-center text-zinc-300 hover:text-white"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"></circle>
+          <circle cx="19" cy="12" r="1"></circle>
+          <circle cx="5" cy="12" r="1"></circle>
+        </svg>
+      </button>
+
+      <div id="hud-extra-actions" class="hidden items-center gap-0.5 pl-0.5 pr-1">
+        <button
+          id="btn-player-reload"
+          type="button"
+          title="アプリを再読み込み"
+          class="w-8 h-8 rounded-full hover:bg-white/15 transition flex items-center justify-center text-zinc-300 hover:text-white"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+        </button>
+        <button
+          id="btn-player-edit"
+          type="button"
+          title="設定・コードを編集"
+          class="w-8 h-8 rounded-full hover:bg-white/15 transition flex items-center justify-center text-zinc-300 hover:text-white"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+          </svg>
+        </button>
+        <button
+          id="btn-player-newtab"
+          type="button"
+          title="別タブで開く"
+          class="w-8 h-8 rounded-full hover:bg-white/15 transition flex items-center justify-center text-zinc-300 hover:text-white"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- Add / Edit Local App Modal                                          -->
+  <!-- =================================================================== -->
+  <div id="editor-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-zinc-950/55 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto">
+    <div class="animate-modal w-full sm:max-w-4xl h-[100dvh] sm:h-[88dvh] sm:max-h-[820px] bg-white dark:bg-zinc-950 sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden">
+
+      <div class="px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0" style="padding-top: max(0.875rem, var(--safe-top));">
+        <div class="flex items-center gap-2.5">
+          <h2 id="editor-modal-title" class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">新規アプリを追加（ローカル）</h2>
+          <span id="editor-size-badge" class="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">0 B</span>
+        </div>
+        <button
+          id="btn-close-editor"
+          type="button"
+          class="w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center justify-center"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="editor-form" class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto lg:overflow-hidden">
+        <!-- Left Column -->
+        <div class="w-full lg:w-80 shrink-0 p-5 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 lg:overflow-y-auto space-y-5 bg-zinc-50/50 dark:bg-zinc-900/30">
+          <div class="flex items-center gap-3.5">
+            <div id="icon-preview-box" class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border shadow-xs transition-colors"></div>
+            <div class="min-w-0 flex-1">
+              <label for="input-app-name" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">アプリ名 <span class="text-rose-500">*</span></label>
+              <input
+                id="input-app-name"
+                type="text"
+                required
+                maxlength="60"
+                placeholder="例: Focus Timer"
+                class="w-full h-9 px-3 text-sm rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-zinc-100/15 focus:border-zinc-400 dark:focus:border-zinc-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="input-app-desc" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">メモ・説明（任意）</label>
+            <input
+              id="input-app-desc"
+              type="text"
+              maxlength="120"
+              placeholder="用途や操作メモなど"
+              class="w-full h-9 px-3 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500"
+            />
+          </div>
+
+          <div>
+            <label for="input-app-tags" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">タグ（カンマ区切り・任意）</label>
+            <input
+              id="input-app-tags"
+              type="text"
+              placeholder="例: ツール, オーディオ, デザイン"
+              class="w-full h-9 px-3 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500"
+            />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">アイコン</span>
+              <div class="inline-flex rounded-md bg-zinc-200/70 dark:bg-zinc-800 p-0.5 text-[11px]">
+                <button type="button" id="tab-icon-glyph" class="px-2 py-0.5 rounded font-medium transition">シンボル</button>
+                <button type="button" id="tab-icon-text" class="px-2 py-0.5 rounded font-medium transition">文字 / 記号</button>
+              </div>
+            </div>
+
+            <div id="panel-icon-glyph" class="grid grid-cols-6 gap-1.5"></div>
+
+            <div id="panel-icon-text" class="hidden space-y-2.5">
+              <input
+                id="input-custom-icon"
+                type="text"
+                maxlength="4"
+                placeholder="1〜2文字を入力"
+                class="w-full h-9 px-3 text-sm text-center rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500"
+              />
+              <div>
+                <span class="block text-[10px] text-zinc-400 mb-1.5">クイック選択（文字・記号）</span>
+                <div id="quick-char-grid" class="grid grid-cols-6 gap-1"></div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <span class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-2">アイコンカラー</span>
+            <div id="color-swatch-grid" class="flex flex-wrap items-center gap-2"></div>
+          </div>
+        </div>
+
+        <!-- Right Column: HTML Code Editor -->
+        <div class="flex-1 flex flex-col min-h-[340px] lg:min-h-0 p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+            <label for="input-app-code" class="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              HTML / CSS / JS コード全文 <span class="text-rose-500">*</span>
+            </label>
+            <div class="flex items-center gap-1.5">
+              <label class="h-7 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer flex items-center gap-1.5 transition">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <span>.html読込</span>
+                <input id="input-html-file" type="file" accept=".html,.htm,text/html" class="hidden" />
+              </label>
+              <button
+                id="btn-copy-code"
+                type="button"
+                class="h-7 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5 transition"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>コピー</span>
+              </button>
+              <button
+                id="btn-download-single-html"
+                type="button"
+                class="hidden h-7 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 items-center gap-1.5 transition"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>書き出し</span>
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            id="input-app-code"
+            required
+            spellcheck="false"
+            placeholder="<!DOCTYPE html>&#10;<html>&#10;  <head>...</head>&#10;  <body>...</body>&#10;</html>"
+            class="flex-1 w-full p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 font-mono text-xs leading-relaxed text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-zinc-100/10 focus:border-zinc-400 dark:focus:border-zinc-600 resize-none"
+          ></textarea>
+        </div>
+      </form>
+
+      <div class="px-5 py-3.5 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 shrink-0 bg-zinc-50/70 dark:bg-zinc-900/40" style="padding-bottom: max(0.875rem, var(--safe-bottom));">
+        <div>
+          <button
+            id="btn-delete-in-editor"
+            type="button"
+            class="hidden h-9 px-3 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition items-center gap-1.5"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            </svg>
+            <span>削除</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            id="btn-cancel-editor"
+            type="button"
+            class="h-9 px-4 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition"
+          >
+            キャンセル
+          </button>
+          <button
+            id="btn-save-and-run"
+            type="button"
+            class="h-9 px-3.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-medium transition hidden sm:inline-flex items-center gap-1.5"
+          >
+            <span>保存して起動</span>
+          </button>
+          <button
+            id="btn-save-app"
+            type="submit"
+            form="editor-form"
+            class="h-9 px-4 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-medium transition shadow-xs"
+          >
+            保存する
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- GitHub Auto-Detected App Customization Modal                        -->
+  <!-- =================================================================== -->
+  <div id="gh-meta-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-zinc-950/55 backdrop-blur-xs p-4 overflow-y-auto">
+    <div class="animate-modal w-full max-w-md bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
+      <div class="px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
+        <div class="min-w-0">
+          <h2 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">表示カスタマイズ（GitHub）</h2>
+          <p id="gh-meta-filename" class="text-[11px] font-mono text-zinc-400 dark:text-zinc-500 truncate mt-0.5"></p>
+        </div>
+        <button
+          id="btn-close-gh-meta"
+          type="button"
+          class="w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center justify-center shrink-0"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="gh-meta-form" class="p-5 space-y-4 overflow-y-auto">
+        <div class="flex items-center gap-3.5">
+          <div id="gh-icon-preview-box" class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border shadow-xs transition-colors"></div>
+          <div class="min-w-0 flex-1">
+            <label for="gh-input-name" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">表示名</label>
+            <input
+              id="gh-input-name"
+              type="text"
+              maxlength="60"
+              placeholder="分かりやすいタイトル"
+              class="w-full h-9 px-3 text-sm rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-zinc-100/15 focus:border-zinc-400 dark:focus:border-zinc-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="gh-input-desc" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">メモ・説明（任意）</label>
+          <input
+            id="gh-input-desc"
+            type="text"
+            maxlength="120"
+            placeholder="用途やメモを入力"
+            class="w-full h-9 px-3 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500"
+          />
+        </div>
+
+        <div>
+          <label for="gh-input-tags" class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">カテゴリ・タグ（カンマ区切り）</label>
+          <input
+            id="gh-input-tags"
+            type="text"
+            placeholder="例: オーディオ, 素材工房, 変換"
+            class="w-full h-9 px-3 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500"
+          />
+        </div>
+
+        <div>
+          <span class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-2">シンボルアイコン</span>
+          <div id="gh-glyph-grid" class="grid grid-cols-6 gap-1.5"></div>
+        </div>
+
+        <div>
+          <span class="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-2">アイコンカラー</span>
+          <div id="gh-color-grid" class="flex flex-wrap items-center gap-2"></div>
+        </div>
+
+        <div class="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2.5">
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">お気に入りピン留め（上位固定）</span>
+            <input id="gh-input-pinned" type="checkbox" class="w-4 h-4 accent-zinc-900 dark:accent-zinc-100 rounded" />
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">ランチャー一覧から非表示にする</span>
+            <input id="gh-input-hidden" type="checkbox" class="w-4 h-4 accent-zinc-900 dark:accent-zinc-100 rounded" />
+          </label>
+        </div>
+      </form>
+
+      <div class="px-5 py-3.5 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 shrink-0 bg-zinc-50/70 dark:bg-zinc-900/40">
+        <button
+          id="btn-reset-gh-meta"
+          type="button"
+          class="h-8 px-2.5 rounded-lg text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition"
+        >
+          初期値に戻す
+        </button>
+        <div class="flex items-center gap-2">
+          <button
+            id="btn-cancel-gh-meta"
+            type="button"
+            class="h-8 px-3.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition"
+          >
+            キャンセル
+          </button>
+          <button
+            type="submit"
+            form="gh-meta-form"
+            class="h-8 px-4 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-medium transition"
+          >
+            保存する
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- Reference / Guide Modal                                             -->
+  <!-- =================================================================== -->
+  <div id="guide-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-zinc-950/55 backdrop-blur-xs p-4 overflow-y-auto">
+    <div class="animate-modal w-full max-w-lg bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[88dvh]">
+      <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
+        <div>
+          <h2 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Reference / Guide</h2>
+          <p class="text-[11px] font-mono text-zinc-400 dark:text-zinc-500 mt-0.5">GitHub Auto-Sync &amp; Cache Specification</p>
+        </div>
+        <button
+          id="btn-close-guide"
+          type="button"
+          class="w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center justify-center"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 overflow-y-auto text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+        <div class="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-1.5">
+          <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">1. GitHub自動検出の仕組み</h3>
+          <p>
+            起動時およびヘッダーの <span class="font-mono text-zinc-900 dark:text-zinc-100">SYNC</span> 実行時に、GitHub REST API（認証不要・無料）へアクセスし、<span class="font-mono">MSY-hub-TEN/my-apps</span>（<span class="font-mono">main</span> ブランチ）のルート直下にある <span class="font-mono">.html</span> ファイルを自動取得します。<span class="font-mono">index.html</span> 自身は自動的に除外されます。
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-1.5">
+          <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">2. APIレート制限とオフラインキャッシュ</h3>
+          <p>
+            認証なしのGitHub APIには「同一IPあたり1時間60回」の呼び出し制限があります。オフライン環境や制限到達時はエラーで画面を止めず、<span class="font-mono">localStorage</span> に保存された直近のキャッシュ一覧を自動表示し、ステータスを <span class="font-mono">OFFLINE / CACHED</span> または <span class="font-mono">RATE LIMIT / CACHED</span> に切り替えます。
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-1.5">
+          <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">3. ブラウザ上での表示カスタマイズとマージ</h3>
+          <p>
+            自動検出されたカード（<span class="font-mono">REPO</span> バッジ付き）は、編集アイコンから表示名・メモ・タグ・アイコン・ピン留め・非表示を個別に設定できます。設定はファイル名をキーに <span class="font-mono">localStorage</span> へ永続保存されるため、GitHubへ新しいHTMLを追加しても既存設定は消えません。
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-1.5">
+          <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">4. ローカル手動追加との共存</h3>
+          <p>
+            「新規追加」や画面への <span class="font-mono">.html</span> ドロップで登録したアプリは <span class="font-mono">LOCAL</span> としてIndexedDBに保存され、GitHub自動検出アプリと同一の検索・タグ・並び替え・プレイヤー上で共存します。
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between gap-3">
+          <div>
+            <div class="text-[11px] font-semibold text-zinc-900 dark:text-zinc-100">現在の同期ステータス</div>
+            <div id="guide-sync-detail" class="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">--</div>
+          </div>
+          <button
+            id="btn-guide-sync-now"
+            type="button"
+            class="h-8 px-3 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 text-xs font-mono font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition shrink-0"
+          >
+            SYNC NOW
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- Backup & Restore Modal                                              -->
+  <!-- =================================================================== -->
+  <div id="backup-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-zinc-950/55 backdrop-blur-xs p-4">
+    <div class="animate-modal w-full max-w-md bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">データのバックアップと復元</h2>
+        <button
+          id="btn-close-backup"
+          type="button"
+          class="w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center justify-center"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40">
+          <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">JSONファイルへ書き出し</h3>
+          <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+            ローカル登録アプリと、GitHub自動検出カードのカスタマイズ設定をまとめて1つのJSONファイルへ保存します。
+          </p>
+          <button
+            id="btn-export-json"
+            type="button"
+            class="mt-3 w-full h-9 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-medium transition flex items-center justify-center gap-1.5"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>バックアップを書き出す</span>
+          </button>
+        </div>
+
+        <div class="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40">
+          <h3 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">JSONファイルから読み込み</h3>
+          <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+            過去に書き出したバックアップファイルを選択して復元します。読み込み方式を選択してください。
+          </p>
+
+          <div class="mt-3 flex items-center gap-4 text-xs">
+            <label class="inline-flex items-center gap-1.5 cursor-pointer text-zinc-700 dark:text-zinc-300">
+              <input type="radio" name="import-mode" value="merge" checked class="accent-zinc-900 dark:accent-zinc-100" />
+              <span>追加・統合（推奨）</span>
+            </label>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer text-zinc-700 dark:text-zinc-300">
+              <input type="radio" name="import-mode" value="replace" class="accent-zinc-900 dark:accent-zinc-100" />
+              <span>すべて置き換え</span>
+            </label>
+          </div>
+
+          <label class="mt-3 w-full h-9 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>JSONファイルを選択</span>
+            <input id="input-import-json" type="file" accept=".json,application/json" class="hidden" />
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between pt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <span>動作確認用のサンプルを再登録</span>
+          <button
+            id="btn-restore-samples"
+            type="button"
+            class="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+          >
+            サンプルを追加
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- Custom Confirmation Dialog                                          -->
+  <!-- =================================================================== -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-zinc-950/60 backdrop-blur-xs p-4">
+    <div class="animate-modal w-full max-w-sm bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-5">
+      <h3 id="confirm-title" class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">確認</h3>
+      <p id="confirm-message" class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed"></p>
+      <div class="mt-5 flex items-center justify-end gap-2">
+        <button
+          id="btn-confirm-cancel"
+          type="button"
+          class="h-8 px-3.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+        >
+          キャンセル
+        </button>
+        <button
+          id="btn-confirm-ok"
+          type="button"
+          class="h-8 px-3.5 rounded-lg text-xs font-medium bg-rose-600 text-white hover:bg-rose-700 transition"
+        >
+          実行する
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none px-4 w-full max-w-sm" style="margin-bottom: var(--safe-bottom);"></div>
+
+  <!-- =================================================================== -->
+  <!-- Application Script                                                  -->
+  <!-- =================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* -------------------------------------------------------------------
+       * 0. GitHub Auto-Sync Configuration
+       * ------------------------------------------------------------------- */
+      const GITHUB_CONFIG = {
+        owner: 'MSY-hub-TEN',
+        repo: 'my-apps',
+        branch: 'main',
+        apiUrl: 'https://api.github.com/repos/MSY-hub-TEN/my-apps/contents/?ref=main',
+        pagesBaseUrl: 'https://msy-hub-ten.github.io/my-apps/',
+        cacheKey: 'deck_gh_cache_v1',
+        metaKey: 'deck_gh_meta_v1'
+      };
+
+      /* -------------------------------------------------------------------
+       * 1. Icon Library & Visual Design Tokens (No Emojis)
+       * ------------------------------------------------------------------- */
+      const GLYPH_ICONS = {
+        terminal: '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
+        code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+        clock: '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>',
+        music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+        waveform: '<path d="M2 12h2"/><path d="M6 8v8"/><path d="M10 5v14"/><path d="M14 9v6"/><path d="M18 7v10"/><path d="M22 12h-2"/>',
+        fileText: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+        gamepad: '<line x1="6" y1="11" x2="10" y2="11"/><line x1="8" y1="9" x2="8" y2="13"/><line x1="15" y1="12" x2="15.01" y2="12"/><line x1="18" y1="10" x2="18.01" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/>',
+        sliders: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="2" y1="14" x2="6" y2="14"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="18" y1="16" x2="22" y2="16"/>',
+        layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+        compass: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
+        calculator: '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/>',
+        palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
+        chart: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+        cpu: '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/>',
+        globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+        bookmark: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+        camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+        box: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>'
+      };
+
+      const QUICK_CHARS = [
+        'A', 'B', 'C', '01', '02', '03',
+        'JS', 'UI', 'FX', 'AV', 'DB', 'OS',
+        '+', '#', '*', '/', '<>', '{}'
+      ];
+
+      const COLOR_THEMES = {
+        zinc: {
+          label: 'モノクロ',
+          swatch: 'bg-zinc-800 dark:bg-zinc-200',
+          box: 'bg-zinc-100 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-100 border-zinc-200/80 dark:border-zinc-700/80'
+        },
+        slate: {
+          label: 'スレート',
+          swatch: 'bg-slate-600',
+          box: 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-700/70'
+        },
+        indigo: {
+          label: 'インディゴ',
+          swatch: 'bg-indigo-600',
+          box: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200/70 dark:border-indigo-800/60'
+        },
+        sky: {
+          label: 'ブルー',
+          swatch: 'bg-sky-600',
+          box: 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200/70 dark:border-sky-800/60'
+        },
+        emerald: {
+          label: 'エメラルド',
+          swatch: 'bg-emerald-600',
+          box: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-800/60'
+        },
+        amber: {
+          label: 'アンバー',
+          swatch: 'bg-amber-600',
+          box: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-amber-800/60'
+        },
+        rose: {
+          label: 'ローズ',
+          swatch: 'bg-rose-600',
+          box: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200/70 dark:border-rose-800/60'
+        },
+        violet: {
+          label: 'バイオレット',
+          swatch: 'bg-violet-600',
+          box: 'bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border-violet-200/70 dark:border-violet-800/60'
+        }
+      };
+
+      /* -------------------------------------------------------------------
+       * 2. Starter Sample Apps (Local IndexedDB)
+       * ------------------------------------------------------------------- */
+      function buildPresetApps() {
+        const now = Date.now();
+        return [
+          {
+            id: 'preset-focus-timer',
+            name: 'Focus Timer',
+            description: 'Web Audio通知音付きのシンプルな集中タイマー',
+            tags: ['ツール', 'タイマー'],
+            iconType: 'glyph',
+            iconValue: 'clock',
+            color: 'zinc',
+            pinned: false,
+            createdAt: now - 3000,
+            updatedAt: now - 3000,
+            lastLaunchedAt: 0,
+            code: `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Focus Timer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+    background: #0c0c0e; color: #f4f4f5;
+    min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .wrap { width: 100%; max-width: 360px; text-align: center; }
+  .modes { display: inline-flex; background: #18181b; border: 1px solid #27272a; border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 36px; }
+  .modes button {
+    border: 0; background: transparent; color: #a1a1aa; font-size: 13px; font-weight: 500;
+    padding: 7px 14px; border-radius: 7px; cursor: pointer; transition: .15s;
+  }
+  .modes button.active { background: #f4f4f5; color: #09090b; }
+  .time {
+    font-size: clamp(64px, 18vw, 88px); font-weight: 600; letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 14px;
+  }
+  .bar { height: 3px; background: #27272a; border-radius: 99px; overflow: hidden; margin-bottom: 36px; }
+  .bar-fill { height: 100%; width: 100%; background: #f4f4f5; transition: width .3s linear; }
+  .actions { display: flex; justify-content: center; gap: 12px; }
+  .btn {
+    height: 46px; padding: 0 26px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: 1px solid #27272a; transition: .15s;
+  }
+  .btn-primary { background: #f4f4f5; color: #09090b; border-color: #f4f4f5; min-width: 128px; }
+  .btn-primary:hover { background: #e4e4e7; }
+  .btn-ghost { background: #18181b; color: #d4d4d8; }
+  .btn-ghost:hover { background: #27272a; }
+  .hint { margin-top: 28px; font-size: 12px; color: #71717a; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="modes">
+      <button class="active" data-min="25">25 min</button>
+      <button data-min="5">5 min</button>
+      <button data-min="1">1 min</button>
+    </div>
+    <div class="time" id="display">25:00</div>
+    <div class="bar"><div class="bar-fill" id="progress"></div></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="toggle">開始</button>
+      <button class="btn btn-ghost" id="reset">リセット</button>
+    </div>
+    <p class="hint" id="status">待機中</p>
+  </div>
+  <script>
+    let totalSec = 25 * 60, remainSec = totalSec, timerId = null, audioCtx = null;
+    const display = document.getElementById('display');
+    const progress = document.getElementById('progress');
+    const toggleBtn = document.getElementById('toggle');
+    const statusEl = document.getElementById('status');
+    function chime() {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.14);
+          gain.gain.setValueAtTime(0.001, now + i * 0.14);
+          gain.gain.exponentialRampToValueAtTime(0.16, now + i * 0.14 + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.14 + 0.8);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.14); osc.stop(now + i * 0.14 + 0.85);
+        });
+      } catch (e) {}
+    }
+    function render() {
+      const m = String(Math.floor(remainSec / 60)).padStart(2, '0');
+      const s = String(remainSec % 60).padStart(2, '0');
+      display.textContent = m + ':' + s;
+      progress.style.width = ((remainSec / totalSec) * 100) + '%';
+    }
+    function stop() { clearInterval(timerId); timerId = null; toggleBtn.textContent = '開始'; }
+    toggleBtn.addEventListener('click', () => {
+      if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+      if (timerId) { stop(); statusEl.textContent = '一時停止中'; }
+      else {
+        if (remainSec <= 0) remainSec = totalSec;
+        toggleBtn.textContent = '一時停止'; statusEl.textContent = '計測中';
+        timerId = setInterval(() => {
+          remainSec--; render();
+          if (remainSec <= 0) { stop(); statusEl.textContent = '完了しました'; chime(); }
+        }, 1000);
+      }
+    });
+    document.getElementById('reset').addEventListener('click', () => {
+      stop(); remainSec = totalSec; statusEl.textContent = '待機中'; render();
+    });
+    document.querySelectorAll('.modes button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.modes button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); stop();
+        totalSec = Number(btn.dataset.min) * 60; remainSec = totalSec; statusEl.textContent = '待機中'; render();
+      });
+    });
+    render();
+  <\/script>
+</body>
+</html>`
+          },
+          {
+            id: 'preset-scratchpad',
+            name: 'Scratchpad',
+            description: '自動保存・文字数カウント付きのシンプルなメモ帳',
+            tags: ['ツール', 'メモ'],
+            iconType: 'glyph',
+            iconValue: 'fileText',
+            color: 'emerald',
+            pinned: false,
+            createdAt: now - 1000,
+            updatedAt: now - 1000,
+            lastLaunchedAt: 0,
+            code: `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scratchpad</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Noto Sans JP", sans-serif;
+    background: #fafafa; color: #18181b;
+    height: 100dvh; display: flex; flex-direction: column;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #111113; color: #f4f4f5; }
+    header { border-color: #27272a !important; }
+    button { background: #18181b !important; color: #d4d4d8 !important; border-color: #27272a !important; }
+  }
+  header {
+    height: 52px; padding: 0 20px; border-bottom: 1px solid #e4e4e7;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .meta { font-size: 12px; color: #71717a; font-variant-numeric: tabular-nums; }
+  button {
+    height: 30px; padding: 0 12px; border-radius: 7px; border: 1px solid #e4e4e7;
+    background: #fff; color: #3f3f46; font-size: 12px; cursor: pointer;
+  }
+  textarea {
+    flex: 1; width: 100%; max-width: 780px; margin: 0 auto;
+    padding: 28px 20px; border: 0; outline: 0; resize: none; background: transparent;
+    color: inherit; font: inherit; font-size: 15px; line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <span class="meta" id="counter">0 文字 / 0 行</span>
+    <button id="clear-btn">クリア</button>
+  </header>
+  <textarea id="pad" placeholder="ここに思考やメモを書き留めます（自動保存）..."></textarea>
+  <script>
+    const KEY = 'deck_sample_scratchpad_v1';
+    const pad = document.getElementById('pad');
+    const counter = document.getElementById('counter');
+    function updateMeta() {
+      const val = pad.value;
+      const chars = val.length;
+      const lines = val ? val.split(/\\r?\\n/).length : 0;
+      counter.textContent = chars + ' 文字 / ' + lines + ' 行';
+    }
+    try { pad.value = localStorage.getItem(KEY) || ''; } catch (e) {}
+    updateMeta();
+    pad.addEventListener('input', () => {
+      updateMeta();
+      try { localStorage.setItem(KEY, pad.value); } catch (e) {}
+    });
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      pad.value = ''; updateMeta();
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      pad.focus();
+    });
+  <\/script>
+</body>
+</html>`
+          }
+        ];
+      }
+
+      /* -------------------------------------------------------------------
+       * 3. Local Storage Layer (IndexedDB with localStorage fallback)
+       * ------------------------------------------------------------------- */
+      const StorageService = {
+        DB_NAME: 'DeckLauncherDB',
+        DB_VERSION: 1,
+        STORE_NAME: 'apps',
+        LS_FALLBACK_KEY: 'deck_launcher_apps_v1',
+        LS_INIT_FLAG: 'deck_launcher_initialized_v1',
+        db: null,
+        usingFallback: false,
+
+        async init() {
+          if (!window.indexedDB) {
+            this.usingFallback = true;
+            return;
+          }
+          try {
+            this.db = await new Promise((resolve, reject) => {
+              const req = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+              req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+                  db.createObjectStore(this.STORE_NAME, { keyPath: 'id' });
+                }
+              };
+              req.onsuccess = () => resolve(req.result);
+              req.onerror = () => reject(req.error);
+            });
+          } catch (err) {
+            console.warn('IndexedDB unavailable, falling back to localStorage:', err);
+            this.usingFallback = true;
+          }
+        },
+
+        async getAll() {
+          if (this.usingFallback) {
+            try {
+              const raw = localStorage.getItem(this.LS_FALLBACK_KEY);
+              return raw ? JSON.parse(raw) : [];
+            } catch (e) {
+              return [];
+            }
+          }
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction(this.STORE_NAME, 'readonly');
+            const req = tx.objectStore(this.STORE_NAME).getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+          });
+        },
+
+        async save(app) {
+          if (this.usingFallback) {
+            const list = await this.getAll();
+            const idx = list.findIndex((a) => a.id === app.id);
+            if (idx >= 0) list[idx] = app;
+            else list.push(app);
+            localStorage.setItem(this.LS_FALLBACK_KEY, JSON.stringify(list));
+            return;
+          }
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction(this.STORE_NAME, 'readwrite');
+            tx.objectStore(this.STORE_NAME).put(app);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        },
+
+        async saveMany(apps, replaceAll = false) {
+          if (this.usingFallback) {
+            let list = replaceAll ? [] : await this.getAll();
+            const map = new Map(list.map((a) => [a.id, a]));
+            apps.forEach((a) => map.set(a.id, a));
+            localStorage.setItem(this.LS_FALLBACK_KEY, JSON.stringify(Array.from(map.values())));
+            return;
+          }
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction(this.STORE_NAME, 'readwrite');
+            const store = tx.objectStore(this.STORE_NAME);
+            if (replaceAll) store.clear();
+            apps.forEach((app) => store.put(app));
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        },
+
+        async remove(id) {
+          if (this.usingFallback) {
+            const list = (await this.getAll()).filter((a) => a.id !== id);
+            localStorage.setItem(this.LS_FALLBACK_KEY, JSON.stringify(list));
+            return;
+          }
+          return new Promise((resolve, reject) => {
+            const tx = this.db.transaction(this.STORE_NAME, 'readwrite');
+            tx.objectStore(this.STORE_NAME).delete(id);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        }
+      };
+
+      /* -------------------------------------------------------------------
+       * 4. GitHub Sync, Cache & Custom Metadata Service
+       * ------------------------------------------------------------------- */
+      const GitHubSyncService = {
+        loadCache() {
+          try {
+            const raw = localStorage.getItem(GITHUB_CONFIG.cacheKey);
+            if (!raw) return { files: [], syncedAt: 0 };
+            const parsed = JSON.parse(raw);
+            return {
+              files: Array.isArray(parsed.files) ? parsed.files : [],
+              syncedAt: Number(parsed.syncedAt) || 0
+            };
+          } catch (e) {
+            return { files: [], syncedAt: 0 };
+          }
+        },
+
+        saveCache(files, syncedAt) {
+          try {
+            localStorage.setItem(
+              GITHUB_CONFIG.cacheKey,
+              JSON.stringify({ files, syncedAt })
+            );
+          } catch (e) {
+            console.warn('Failed to save GitHub cache:', e);
+          }
+        },
+
+        loadCustomMeta() {
+          try {
+            const raw = localStorage.getItem(GITHUB_CONFIG.metaKey);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : {};
+          } catch (e) {
+            return {};
+          }
+        },
+
+        saveCustomMeta(metaMap) {
+          try {
+            localStorage.setItem(GITHUB_CONFIG.metaKey, JSON.stringify(metaMap));
+          } catch (e) {
+            console.warn('Failed to save GitHub custom metadata:', e);
+          }
+        },
+
+        prettifyFilename(filename) {
+          return filename
+            .replace(/\.html$/i, '')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        },
+
+        inferDefaultVisual(filename) {
+          const lower = filename.toLowerCase();
+          if (lower.includes('sound') || lower.includes('audio') || lower.includes('sfx') || lower.includes('music')) {
+            return { iconValue: 'waveform', color: 'indigo', tags: ['オーディオ'] };
+          }
+          if (lower.includes('pixel') || lower.includes('sprite') || lower.includes('design') || lower.includes('image')) {
+            return { iconValue: 'palette', color: 'violet', tags: ['デザイン'] };
+          }
+          if (lower.includes('forge') || lower.includes('convert') || lower.includes('aether')) {
+            return { iconValue: 'sliders', color: 'amber', tags: ['変換ツール'] };
+          }
+          return { iconValue: 'globe', color: 'sky', tags: ['GitHub'] };
+        },
+
+        resolveAppUrl(filename) {
+          const encoded = encodeURIComponent(filename);
+          const proto = window.location.protocol;
+          if (proto === 'http:' || proto === 'https:') {
+            return `./${encoded}`;
+          }
+          // Fallback when index.html is opened directly via file://
+          return `${GITHUB_CONFIG.pagesBaseUrl}${encoded}`;
+        },
+
+        async fetchRepoHtmlFiles() {
+          const res = await fetch(GITHUB_CONFIG.apiUrl, {
+            headers: { Accept: 'application/vnd.github.v3+json' },
+            cache: 'no-store'
+          });
+
+          if (res.status === 403) {
+            const remaining = res.headers.get('X-RateLimit-Remaining');
+            if (remaining === '0') {
+              const err = new Error('RATE_LIMIT');
+              err.code = 'RATE_LIMIT';
+              throw err;
+            }
+          }
+
+          if (!res.ok) {
+            const err = new Error(`HTTP_${res.status}`);
+            err.code = 'HTTP_ERROR';
+            throw err;
+          }
+
+          const items = await res.json();
+          if (!Array.isArray(items)) {
+            throw new Error('INVALID_RESPONSE');
+          }
+
+          return items
+            .filter(
+              (item) =>
+                item &&
+                item.type === 'file' &&
+                typeof item.name === 'string' &&
+                /\.html$/i.test(item.name) &&
+                item.name.toLowerCase() !== 'index.html'
+            )
+            .map((item) => ({
+              filename: item.name,
+              size: Number(item.size) || 0,
+              sha: item.sha || '',
+              htmlUrl: item.html_url || ''
+            }));
+        }
+      };
+
+      /* -------------------------------------------------------------------
+       * 5. Application State
+       * ------------------------------------------------------------------- */
+      const State = {
+        localApps: [],
+        ghFiles: [],
+        ghCustomMeta: {},
+        ghSyncedAt: 0,
+        ghStatus: 'INIT', // INIT | SYNCING | SYNCED | OFFLINE | RATE_LIMIT
+        searchQuery: '',
+        activeTag: 'ALL',
+        sortBy: localStorage.getItem('deck_sort') || 'recent',
+        viewMode: localStorage.getItem('deck_view') || 'grid',
+        editingId: null,
+        editingGhFilename: null,
+        ghEditorIconValue: 'globe',
+        ghEditorColor: 'sky',
+        runningApp: null, // { id, source, filename, code }
+        editorIconType: 'glyph',
+        editorIconValue: 'terminal',
+        editorColor: 'zinc',
+        confirmCallback: null
+      };
+
+      /* -------------------------------------------------------------------
+       * 6. Utility Helpers
+       * ------------------------------------------------------------------- */
+      function generateId() {
+        if (window.crypto && crypto.randomUUID) {
+          return crypto.randomUUID();
+        }
+        return 'app-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+      }
+
+      function formatBytes(bytes) {
+        if (!bytes) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+      }
+
+      function getByteLength(str) {
+        return new Blob([str || '']).size;
+      }
+
+      function formatRelativeDate(ts) {
+        if (!ts) return '未起動';
+        const diff = Date.now() - ts;
+        const min = Math.floor(diff / 60000);
+        if (min < 1) return 'たった今';
+        if (min < 60) return min + '分前';
+        const hr = Math.floor(min / 60);
+        if (hr < 24) return hr + '時間前';
+        const day = Math.floor(hr / 24);
+        if (day < 30) return day + '日前';
+        const d = new Date(ts);
+        return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+      }
+
+      function formatTimestamp(ts) {
+        if (!ts) return '未同期';
+        const d = new Date(ts);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderAppIconInner(app, sizeClass = 'w-5 h-5') {
+        if (app.iconType === 'text' && app.iconValue) {
+          const isShort = app.iconValue.length <= 2;
+          return `<span class="font-semibold leading-none select-none ${isShort ? 'text-lg' : 'text-xs'}">${escapeHtml(app.iconValue)}</span>`;
+        }
+        const path = GLYPH_ICONS[app.iconValue] || GLYPH_ICONS.terminal;
+        return `<svg class="${sizeClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+      }
+
+      function copyToClipboard(text) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          return ok;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function triggerDownload(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function showToast(message, type = 'default') {
+        const container = document.getElementById('toast-container');
+        const el = document.createElement('div');
+        const colorCls =
+          type === 'error'
+            ? 'bg-rose-600 text-white border-rose-500'
+            : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-800 dark:border-zinc-200';
+        el.className = `animate-toast pointer-events-auto px-4 py-2.5 rounded-xl border shadow-lg text-xs font-medium tracking-tight ${colorCls}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(6px)';
+          el.style.transition = 'opacity 0.2s, transform 0.2s';
+          setTimeout(() => el.remove(), 220);
+        }, 2400);
+      }
+
+      /* -------------------------------------------------------------------
+       * 7. Unified App List Builder (GitHub Auto-Detected + Local Manual)
+       * ------------------------------------------------------------------- */
+      function getMergedApps() {
+        const ghApps = State.ghFiles.map((file) => {
+          const custom = State.ghCustomMeta[file.filename] || {};
+          const defaults = GitHubSyncService.inferDefaultVisual(file.filename);
+          return {
+            id: `gh:${file.filename}`,
+            source: 'github',
+            filename: file.filename,
+            name: custom.name || GitHubSyncService.prettifyFilename(file.filename),
+            description: custom.description !== undefined ? custom.description : file.filename,
+            tags: Array.isArray(custom.tags) ? custom.tags : defaults.tags,
+            iconType: 'glyph',
+            iconValue: custom.iconValue || defaults.iconValue,
+            color: custom.color || defaults.color,
+            pinned: Boolean(custom.pinned),
+            hidden: Boolean(custom.hidden),
+            sizeBytes: file.size || 0,
+            createdAt: State.ghSyncedAt || 0,
+            updatedAt: custom.updatedAt || State.ghSyncedAt || 0,
+            lastLaunchedAt: Number(custom.lastLaunchedAt) || 0
+          };
+        });
+
+        const localApps = State.localApps.map((app) => ({
+          ...app,
+          source: 'local',
+          hidden: false,
+          sizeBytes: getByteLength(app.code)
+        }));
+
+        return [...ghApps, ...localApps];
+      }
+
+      /* -------------------------------------------------------------------
+       * 8. Sync Status UI & GitHub Sync Action
+       * ------------------------------------------------------------------- */
+      function updateSyncStatusUI() {
+        const dot = document.getElementById('sync-status-dot');
+        const text = document.getElementById('sync-status-text');
+        const mobileText = document.getElementById('sync-status-mobile-text');
+        const mobileTime = document.getElementById('sync-time-mobile-text');
+        const spinner = document.getElementById('icon-sync-spinner');
+        const guideDetail = document.getElementById('guide-sync-detail');
+        const footerMeta = document.getElementById('footer-sync-meta');
+
+        let label = 'INIT';
+        let dotCls = 'bg-zinc-400';
+
+        if (State.ghStatus === 'SYNCING') {
+          label = 'SYNCING...';
+          dotCls = 'bg-sky-500 animate-pulse';
+          spinner.classList.add('animate-spin');
+        } else {
+          spinner.classList.remove('animate-spin');
+          if (State.ghStatus === 'SYNCED') {
+            label = 'SYNCED';
+            dotCls = 'bg-emerald-500';
+          } else if (State.ghStatus === 'RATE_LIMIT') {
+            label = 'RATE LIMIT / CACHED';
+            dotCls = 'bg-amber-500';
+          } else if (State.ghStatus === 'OFFLINE') {
+            label = 'OFFLINE / CACHED';
+            dotCls = 'bg-amber-500';
+          }
+        }
+
+        dot.className = `w-1.5 h-1.5 rounded-full ${dotCls}`;
+        text.textContent = label;
+        mobileText.textContent = `GITHUB: ${label}`;
+        mobileTime.textContent = State.ghSyncedAt ? `最終同期 ${formatTimestamp(State.ghSyncedAt)}` : '';
+        footerMeta.textContent = `Repo: ${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo} (${formatTimestamp(State.ghSyncedAt)})`;
+        if (guideDetail) {
+          guideDetail.textContent = `${label} · ${State.ghFiles.length} files · ${formatTimestamp(State.ghSyncedAt)}`;
+        }
+      }
+
+      async function syncGitHubRepo(manual = false) {
+        if (State.ghStatus === 'SYNCING') return;
+        State.ghStatus = 'SYNCING';
+        updateSyncStatusUI();
+
+        try {
+          const files = await GitHubSyncService.fetchRepoHtmlFiles();
+          const now = Date.now();
+          State.ghFiles = files;
+          State.ghSyncedAt = now;
+          State.ghStatus = 'SYNCED';
+          GitHubSyncService.saveCache(files, now);
+          updateSyncStatusUI();
+          renderApps();
+          if (manual) {
+            showToast(`GitHubから ${files.length} 件のHTMLを同期しました`);
+          }
+        } catch (err) {
+          console.warn('GitHub sync fallback to cache:', err);
+          if (err && err.code === 'RATE_LIMIT') {
+            State.ghStatus = 'RATE_LIMIT';
+            if (manual) showToast('API制限のためキャッシュを表示しています', 'error');
+          } else {
+            State.ghStatus = 'OFFLINE';
+            if (manual) showToast('オフラインまたは通信エラーのためキャッシュを表示しています', 'error');
+          }
+          updateSyncStatusUI();
+          renderApps();
+        }
+      }
+
+      /* -------------------------------------------------------------------
+       * 9. Custom Confirmation Modal
+       * ------------------------------------------------------------------- */
+      function openConfirm({ title, message, okLabel = '削除する', danger = true, onConfirm }) {
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-message').textContent = message;
+        const okBtn = document.getElementById('btn-confirm-ok');
+        okBtn.textContent = okLabel;
+        okBtn.className = danger
+          ? 'h-8 px-3.5 rounded-lg text-xs font-medium bg-rose-600 text-white hover:bg-rose-700 transition'
+          : 'h-8 px-3.5 rounded-lg text-xs font-medium bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition';
+        State.confirmCallback = onConfirm;
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeConfirm() {
+        State.confirmCallback = null;
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      /* -------------------------------------------------------------------
+       * 10. Home Screen Rendering
+       * ------------------------------------------------------------------- */
+      function getFilteredApps() {
+        const all = getMergedApps();
+        const q = State.searchQuery.trim().toLowerCase();
+
+        let list = all.filter((app) => {
+          if (State.activeTag === 'HIDDEN') {
+            if (!app.hidden) return false;
+          } else {
+            if (app.hidden) return false;
+            const matchesTag =
+              State.activeTag === 'ALL' ||
+              (State.activeTag === 'PINNED' && app.pinned) ||
+              (State.activeTag === 'SOURCE_GH' && app.source === 'github') ||
+              (State.activeTag === 'SOURCE_LOCAL' && app.source === 'local') ||
+              (Array.isArray(app.tags) && app.tags.includes(State.activeTag));
+            if (!matchesTag) return false;
+          }
+
+          if (!q) return true;
+          const haystack = [app.name, app.description, app.filename || '', ...(app.tags || [])]
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(q);
+        });
+
+        list.sort((a, b) => {
+          if (State.sortBy !== 'name' && Boolean(a.pinned) !== Boolean(b.pinned)) {
+            return a.pinned ? -1 : 1;
+          }
+          switch (State.sortBy) {
+            case 'name':
+              return (a.name || '').localeCompare(b.name || '', 'ja');
+            case 'updated':
+              return (b.updatedAt || 0) - (a.updatedAt || 0);
+            case 'created':
+              return (b.createdAt || 0) - (a.createdAt || 0);
+            case 'recent':
+            default:
+              return (b.lastLaunchedAt || 0) - (a.lastLaunchedAt || 0) || (b.updatedAt || 0) - (a.updatedAt || 0);
+          }
+        });
+
+        return list;
+      }
+
+      function renderTagBar() {
+        const bar = document.getElementById('tag-filter-bar');
+        const all = getMergedApps();
+        const tagCounts = new Map();
+        let pinnedCount = 0;
+        let hiddenCount = 0;
+        let ghCount = 0;
+        let localCount = 0;
+
+        all.forEach((app) => {
+          if (app.hidden) {
+            hiddenCount++;
+            return;
+          }
+          if (app.pinned) pinnedCount++;
+          if (app.source === 'github') ghCount++;
+          else localCount++;
+          (app.tags || []).forEach((tag) => {
+            tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+          });
+        });
+
+        const pills = [{ key: 'ALL', label: 'すべて' }];
+        if (pinnedCount > 0) pills.push({ key: 'PINNED', label: 'ピン留め' });
+        if (ghCount > 0 && localCount > 0) {
+          pills.push({ key: 'SOURCE_GH', label: 'GitHub' });
+          pills.push({ key: 'SOURCE_LOCAL', label: 'ローカル' });
+        }
+        Array.from(tagCounts.keys())
+          .sort((a, b) => a.localeCompare(b, 'ja'))
+          .forEach((tag) => pills.push({ key: tag, label: tag }));
+        if (hiddenCount > 0) {
+          pills.push({ key: 'HIDDEN', label: `非表示 (${hiddenCount})` });
+        }
+
+        if (!pills.some((p) => p.key === State.activeTag)) {
+          State.activeTag = 'ALL';
+        }
+
+        bar.innerHTML = pills
+          .map((p) => {
+            const active = p.key === State.activeTag;
+            const cls = active
+              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-900 dark:border-zinc-100'
+              : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100';
+            return `<button type="button" data-tag="${escapeHtml(p.key)}" class="h-7 px-3 rounded-full border text-xs font-medium whitespace-nowrap transition ${cls}">${escapeHtml(p.label)}</button>`;
+          })
+          .join('');
+      }
+
+      function renderViewToggle() {
+        const gridBtn = document.getElementById('btn-view-grid');
+        const listBtn = document.getElementById('btn-view-list');
+        const activeCls = 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100';
+        const inactiveCls = 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200';
+        gridBtn.className = `w-7 h-7 rounded-md flex items-center justify-center transition ${State.viewMode === 'grid' ? activeCls : inactiveCls}`;
+        listBtn.className = `w-7 h-7 rounded-md flex items-center justify-center transition ${State.viewMode === 'list' ? activeCls : inactiveCls}`;
+      }
+
+      function renderStats() {
+        const visible = getMergedApps().filter((a) => !a.hidden);
+        const totalBytes = visible.reduce((sum, a) => sum + (a.sizeBytes || 0), 0);
+        document.getElementById('storage-stats').textContent = `${visible.length} apps · ${formatBytes(totalBytes)}`;
+        document.getElementById('storage-engine-badge').textContent = StorageService.usingFallback
+          ? 'Storage: localStorage'
+          : 'Storage: IndexedDB';
+      }
+
+      function renderApps() {
+        renderTagBar();
+        renderViewToggle();
+        renderStats();
+
+        const container = document.getElementById('app-list-container');
+        const emptyState = document.getElementById('empty-state');
+        const filtered = getFilteredApps();
+
+        if (filtered.length === 0) {
+          container.innerHTML = '';
+          container.classList.add('hidden');
+          emptyState.classList.remove('hidden');
+
+          const isFiltering = State.searchQuery.trim() !== '' || State.activeTag !== 'ALL';
+          document.getElementById('empty-state-title').textContent = isFiltering
+            ? '条件に一致するアプリがありません'
+            : '表示できるアプリがありません';
+          document.getElementById('empty-state-desc').textContent = isFiltering
+            ? '検索キーワードやタグフィルタを変更してみてください。'
+            : '「SYNC」でGitHubリポジトリから取得するか、「新規追加」または.htmlファイルのドロップで登録できます。';
+          document.getElementById('btn-empty-add').classList.toggle('hidden', isFiltering);
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+        container.classList.remove('hidden');
+
+        if (State.viewMode === 'list') {
+          container.className = 'flex flex-col gap-2';
+          container.innerHTML = filtered.map(buildListCardHtml).join('');
+        } else {
+          container.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5';
+          container.innerHTML = filtered.map(buildGridCardHtml).join('');
+        }
+      }
+
+      function buildSourceBadge(app) {
+        if (app.source === 'github') {
+          return '<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400">REPO</span>';
+        }
+        return '<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">LOCAL</span>';
+      }
+
+      function buildGridCardHtml(app) {
+        const theme = COLOR_THEMES[app.color] || COLOR_THEMES.zinc;
+        const sizeStr = formatBytes(app.sizeBytes);
+        const tagsHtml = (app.tags || [])
+          .slice(0, 3)
+          .map(
+            (t) =>
+              `<span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-[10px] font-medium text-zinc-600 dark:text-zinc-400">${escapeHtml(t)}</span>`
+          )
+          .join('');
+
+        const hideOrDeleteBtn =
+          app.source === 'github'
+            ? `<button
+                type="button"
+                data-action="toggle-hide"
+                data-app-id="${escapeHtml(app.id)}"
+                title="${app.hidden ? '一覧に表示する' : '一覧から非表示にする'}"
+                class="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  ${
+                    app.hidden
+                      ? '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>'
+                      : '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/>'
+                  }
+                </svg>
+              </button>`
+            : `<button
+                type="button"
+                data-action="delete"
+                data-app-id="${escapeHtml(app.id)}"
+                title="削除"
+                class="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center justify-center transition"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                </svg>
+              </button>`;
+
+        return `
+          <article
+            data-app-id="${escapeHtml(app.id)}"
+            data-action="launch"
+            tabindex="0"
+            role="button"
+            class="group relative flex flex-col justify-between p-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-zinc-200/90 dark:border-zinc-800/90 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-md dark:hover:shadow-black/40 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-900/20 dark:focus:ring-zinc-100/20 ${app.hidden ? 'opacity-70' : ''}"
+          >
+            <div>
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 ${theme.box}">
+                  ${renderAppIconInner(app, 'w-5 h-5')}
+                </div>
+
+                <div class="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    data-action="pin"
+                    data-app-id="${escapeHtml(app.id)}"
+                    title="${app.pinned ? 'ピン留めを解除' : '上部にピン留め'}"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center transition ${
+                      app.pinned
+                        ? 'text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800'
+                        : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }"
+                  >
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="${app.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="17" x2="12" y2="22"></line>
+                      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    data-action="edit"
+                    data-app-id="${escapeHtml(app.id)}"
+                    title="${app.source === 'github' ? '表示をカスタマイズ' : 'コードを編集'}"
+                    class="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition"
+                  >
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                    </svg>
+                  </button>
+                  ${hideOrDeleteBtn}
+                </div>
+              </div>
+
+              <div class="mt-3.5">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">${escapeHtml(app.name)}</h3>
+                    ${app.pinned ? '<span class="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 shrink-0" title="ピン留め中"></span>' : ''}
+                  </div>
+                  ${buildSourceBadge(app)}
+                </div>
+                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 min-h-[2rem] leading-relaxed">
+                  ${app.description ? escapeHtml(app.description) : '<span class="text-zinc-400/70 dark:text-zinc-600">説明なし</span>'}
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1 overflow-hidden">
+                ${tagsHtml || '<span class="text-[10px] text-zinc-400 dark:text-zinc-600 font-mono">HTML</span>'}
+              </div>
+              <div class="flex items-center gap-2 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 shrink-0">
+                <span>${sizeStr}</span>
+                <span>·</span>
+                <span>${formatRelativeDate(app.lastLaunchedAt || app.updatedAt)}</span>
+              </div>
+            </div>
+          </article>
+        `;
+      }
+
+      function buildListCardHtml(app) {
+        const theme = COLOR_THEMES[app.color] || COLOR_THEMES.zinc;
+        const sizeStr = formatBytes(app.sizeBytes);
+        const hideOrDeleteBtn =
+          app.source === 'github'
+            ? `<button
+                type="button"
+                data-action="toggle-hide"
+                data-app-id="${escapeHtml(app.id)}"
+                title="${app.hidden ? '表示する' : '非表示にする'}"
+                class="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  ${
+                    app.hidden
+                      ? '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>'
+                      : '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/>'
+                  }
+                </svg>
+              </button>`
+            : `<button
+                type="button"
+                data-action="delete"
+                data-app-id="${escapeHtml(app.id)}"
+                title="削除"
+                class="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 flex items-center justify-center transition"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                </svg>
+              </button>`;
+
+        return `
+          <article
+            data-app-id="${escapeHtml(app.id)}"
+            data-action="launch"
+            tabindex="0"
+            role="button"
+            class="group flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-zinc-200/90 dark:border-zinc-800/90 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-900/20 dark:focus:ring-zinc-100/20 ${app.hidden ? 'opacity-70' : ''}"
+          >
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <div class="w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${theme.box}">
+                ${renderAppIconInner(app, 'w-4 h-4')}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">${escapeHtml(app.name)}</h3>
+                  ${app.pinned ? '<span class="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 shrink-0"></span>' : ''}
+                  ${buildSourceBadge(app)}
+                </div>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                  ${escapeHtml(app.description || (app.tags || []).join(', ') || 'HTML Application')}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="hidden sm:inline text-[11px] font-mono text-zinc-400 dark:text-zinc-500">${sizeStr}</span>
+              <div class="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  data-action="pin"
+                  data-app-id="${escapeHtml(app.id)}"
+                  title="${app.pinned ? 'ピン留め解除' : 'ピン留め'}"
+                  class="w-7 h-7 rounded-lg flex items-center justify-center transition ${
+                    app.pinned ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                  } hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="${app.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="17" x2="12" y2="22"></line>
+                    <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  data-action="edit"
+                  data-app-id="${escapeHtml(app.id)}"
+                  title="${app.source === 'github' ? '表示をカスタマイズ' : '編集'}"
+                  class="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition"
+                >
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                  </svg>
+                </button>
+                ${hideOrDeleteBtn}
+              </div>
+            </div>
+          </article>
+        `;
+      }
+
+      /* -------------------------------------------------------------------
+       * 11. Fullscreen App Player & Draggable Floating HUD
+       * ------------------------------------------------------------------- */
+      async function launchApp(appId) {
+        const app = getMergedApps().find((a) => a.id === appId);
+        if (!app) return;
+
+        State.runningApp = app;
+        const now = Date.now();
+
+        if (app.source === 'github') {
+          const prev = State.ghCustomMeta[app.filename] || {};
+          State.ghCustomMeta[app.filename] = { ...prev, lastLaunchedAt: now };
+          GitHubSyncService.saveCustomMeta(State.ghCustomMeta);
+        } else {
+          const localRecord = State.localApps.find((a) => a.id === app.id);
+          if (localRecord) {
+            localRecord.lastLaunchedAt = now;
+            try {
+              await StorageService.save(localRecord);
+            } catch (e) {}
+          }
+        }
+
+        const overlay = document.getElementById('player-overlay');
+        const frame = document.getElementById('player-frame');
+        const extra = document.getElementById('hud-extra-actions');
+
+        extra.classList.add('hidden');
+        extra.classList.remove('flex');
+
+        overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        if (app.source === 'github') {
+          frame.removeAttribute('srcdoc');
+          frame.src = GitHubSyncService.resolveAppUrl(app.filename);
+        } else {
+          frame.removeAttribute('src');
+          frame.srcdoc = app.code;
+        }
+        renderApps();
+      }
+
+      function closePlayer() {
+        const overlay = document.getElementById('player-overlay');
+        const frame = document.getElementById('player-frame');
+        frame.removeAttribute('srcdoc');
+        frame.src = 'about:blank';
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+        State.runningApp = null;
+      }
+
+      function reloadRunningApp() {
+        if (!State.runningApp) return;
+        const frame = document.getElementById('player-frame');
+        if (State.runningApp.source === 'github') {
+          const url = GitHubSyncService.resolveAppUrl(State.runningApp.filename);
+          frame.src = 'about:blank';
+          requestAnimationFrame(() => {
+            frame.src = url;
+          });
+        } else {
+          const code = State.runningApp.code;
+          frame.srcdoc = '';
+          requestAnimationFrame(() => {
+            frame.srcdoc = code;
+          });
+        }
+        showToast('アプリを再読み込みしました');
+      }
+
+      function openRunningAppInNewTab() {
+        if (!State.runningApp) return;
+        if (State.runningApp.source === 'github') {
+          window.open(GitHubSyncService.resolveAppUrl(State.runningApp.filename), '_blank', 'noopener');
+          return;
+        }
+        const blob = new Blob([State.runningApp.code], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener');
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+
+      function initDraggableHud() {
+        const hud = document.getElementById('player-hud');
+        const handle = document.getElementById('hud-drag-handle');
+        const frame = document.getElementById('player-frame');
+
+        let dragging = false;
+        let startX = 0, startY = 0;
+        let origLeft = 0, origTop = 0;
+
+        function clampPosition(left, top) {
+          const rect = hud.getBoundingClientRect();
+          const pad = 8;
+          const maxLeft = Math.max(pad, window.innerWidth - rect.width - pad);
+          const maxTop = Math.max(pad, window.innerHeight - rect.height - pad);
+          return {
+            left: Math.min(Math.max(pad, left), maxLeft),
+            top: Math.min(Math.max(pad, top), maxTop)
+          };
+        }
+
+        handle.addEventListener('pointerdown', (e) => {
+          dragging = true;
+          handle.setPointerCapture(e.pointerId);
+          const rect = hud.getBoundingClientRect();
+          startX = e.clientX;
+          startY = e.clientY;
+          origLeft = rect.left;
+          origTop = rect.top;
+
+          hud.style.right = 'auto';
+          hud.style.left = rect.left + 'px';
+          hud.style.top = rect.top + 'px';
+          hud.style.opacity = '1';
+          frame.classList.add('pointer-events-none');
+        });
+
+        handle.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          const next = clampPosition(origLeft + (e.clientX - startX), origTop + (e.clientY - startY));
+          hud.style.left = next.left + 'px';
+          hud.style.top = next.top + 'px';
+        });
+
+        function endDrag(e) {
+          if (!dragging) return;
+          dragging = false;
+          try {
+            handle.releasePointerCapture(e.pointerId);
+          } catch (err) {}
+          hud.style.opacity = '';
+          frame.classList.remove('pointer-events-none');
+        }
+
+        handle.addEventListener('pointerup', endDrag);
+        handle.addEventListener('pointercancel', endDrag);
+
+        window.addEventListener('resize', () => {
+          if (hud.style.left) {
+            const rect = hud.getBoundingClientRect();
+            const clamped = clampPosition(rect.left, rect.top);
+            hud.style.left = clamped.left + 'px';
+            hud.style.top = clamped.top + 'px';
+          }
+        });
+      }
+
+      /* -------------------------------------------------------------------
+       * 12. GitHub Card Customization Modal Controller
+       * ------------------------------------------------------------------- */
+      function renderGhMetaPickers() {
+        const glyphGrid = document.getElementById('gh-glyph-grid');
+        glyphGrid.innerHTML = Object.keys(GLYPH_ICONS)
+          .map((key) => {
+            const selected = State.ghEditorIconValue === key;
+            const cls = selected
+              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-900 dark:border-zinc-100'
+              : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600';
+            return `<button type="button" data-gh-glyph="${key}" class="h-9 rounded-lg border flex items-center justify-center transition ${cls}">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GLYPH_ICONS[key]}</svg>
+            </button>`;
+          })
+          .join('');
+
+        const colorGrid = document.getElementById('gh-color-grid');
+        colorGrid.innerHTML = Object.entries(COLOR_THEMES)
+          .map(([key, cfg]) => {
+            const active = State.ghEditorColor === key;
+            return `<button type="button" data-gh-color="${key}" title="${cfg.label}" class="w-6 h-6 rounded-full ${cfg.swatch} transition ${
+              active ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-zinc-100 dark:ring-offset-zinc-950 scale-105' : 'opacity-80 hover:opacity-100'
+            }"></button>`;
+          })
+          .join('');
+
+        const preview = document.getElementById('gh-icon-preview-box');
+        const theme = COLOR_THEMES[State.ghEditorColor] || COLOR_THEMES.zinc;
+        preview.className = `w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border shadow-xs transition-colors ${theme.box}`;
+        preview.innerHTML = renderAppIconInner({ iconType: 'glyph', iconValue: State.ghEditorIconValue }, 'w-6 h-6');
+      }
+
+      function openGhMetaModal(filename) {
+        const app = getMergedApps().find((a) => a.source === 'github' && a.filename === filename);
+        if (!app) return;
+
+        State.editingGhFilename = filename;
+        State.ghEditorIconValue = app.iconValue || 'globe';
+        State.ghEditorColor = app.color || 'sky';
+
+        document.getElementById('gh-meta-filename').textContent = filename;
+        document.getElementById('gh-input-name').value = app.name;
+        document.getElementById('gh-input-desc').value = app.description === filename ? '' : app.description;
+        document.getElementById('gh-input-tags').value = (app.tags || []).join(', ');
+        document.getElementById('gh-input-pinned').checked = Boolean(app.pinned);
+        document.getElementById('gh-input-hidden').checked = Boolean(app.hidden);
+
+        renderGhMetaPickers();
+
+        const modal = document.getElementById('gh-meta-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeGhMetaModal() {
+        State.editingGhFilename = null;
+        const modal = document.getElementById('gh-meta-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      function saveGhMetaForm() {
+        const filename = State.editingGhFilename;
+        if (!filename) return;
+
+        const name = document.getElementById('gh-input-name').value.trim();
+        const description = document.getElementById('gh-input-desc').value.trim();
+        const rawTags = document.getElementById('gh-input-tags').value;
+        const pinned = document.getElementById('gh-input-pinned').checked;
+        const hidden = document.getElementById('gh-input-hidden').checked;
+
+        const tags = rawTags
+          .split(/[,、\s]+/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .slice(0, 6);
+
+        const prev = State.ghCustomMeta[filename] || {};
+        State.ghCustomMeta[filename] = {
+          ...prev,
+          name: name || GitHubSyncService.prettifyFilename(filename),
+          description: description || filename,
+          tags,
+          iconValue: State.ghEditorIconValue,
+          color: State.ghEditorColor,
+          pinned,
+          hidden,
+          updatedAt: Date.now()
+        };
+
+        GitHubSyncService.saveCustomMeta(State.ghCustomMeta);
+        closeGhMetaModal();
+        renderApps();
+        showToast('表示設定を保存しました');
+      }
+
+      function resetGhMeta() {
+        const filename = State.editingGhFilename;
+        if (!filename) return;
+        delete State.ghCustomMeta[filename];
+        GitHubSyncService.saveCustomMeta(State.ghCustomMeta);
+        closeGhMetaModal();
+        renderApps();
+        showToast('表示設定を初期値に戻しました');
+      }
+
+      /* -------------------------------------------------------------------
+       * 13. Local Add / Edit Modal Controller
+       * ------------------------------------------------------------------- */
+      function renderEditorPickers() {
+        const glyphContainer = document.getElementById('panel-icon-glyph');
+        glyphContainer.innerHTML = Object.keys(GLYPH_ICONS)
+          .map((key) => {
+            const selected = State.editorIconType === 'glyph' && State.editorIconValue === key;
+            const cls = selected
+              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-900 dark:border-zinc-100'
+              : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600';
+            return `<button type="button" data-glyph="${key}" class="h-9 rounded-lg border flex items-center justify-center transition ${cls}">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${GLYPH_ICONS[key]}</svg>
+            </button>`;
+          })
+          .join('');
+
+        const charGrid = document.getElementById('quick-char-grid');
+        charGrid.innerHTML = QUICK_CHARS.map((ch) => {
+          const selected = State.editorIconType === 'text' && State.editorIconValue === ch;
+          const cls = selected
+            ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-900 dark:border-zinc-100'
+            : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400';
+          return `<button type="button" data-char="${escapeHtml(ch)}" class="h-8 rounded-lg border text-xs font-mono font-medium flex items-center justify-center transition ${cls}">${escapeHtml(ch)}</button>`;
+        }).join('');
+
+        const colorGrid = document.getElementById('color-swatch-grid');
+        colorGrid.innerHTML = Object.entries(COLOR_THEMES)
+          .map(([key, cfg]) => {
+            const active = State.editorColor === key;
+            return `<button type="button" data-color="${key}" title="${cfg.label}" class="w-6 h-6 rounded-full ${cfg.swatch} transition ${
+              active ? 'ring-2 ring-offset-2 ring-zinc-900 dark:ring-zinc-100 dark:ring-offset-zinc-950 scale-105' : 'opacity-80 hover:opacity-100'
+            }"></button>`;
+          })
+          .join('');
+
+        const tabGlyph = document.getElementById('tab-icon-glyph');
+        const tabText = document.getElementById('tab-icon-text');
+        const panelGlyph = document.getElementById('panel-icon-glyph');
+        const panelText = document.getElementById('panel-icon-text');
+
+        const activeTabCls = 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xs';
+        const inactiveTabCls = 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200';
+
+        if (State.editorIconType === 'glyph') {
+          tabGlyph.className = `px-2 py-0.5 rounded font-medium transition ${activeTabCls}`;
+          tabText.className = `px-2 py-0.5 rounded font-medium transition ${inactiveTabCls}`;
+          panelGlyph.classList.remove('hidden');
+          panelText.classList.add('hidden');
+        } else {
+          tabGlyph.className = `px-2 py-0.5 rounded font-medium transition ${inactiveTabCls}`;
+          tabText.className = `px-2 py-0.5 rounded font-medium transition ${activeTabCls}`;
+          panelGlyph.classList.add('hidden');
+          panelText.classList.remove('hidden');
+        }
+
+        const preview = document.getElementById('icon-preview-box');
+        const theme = COLOR_THEMES[State.editorColor] || COLOR_THEMES.zinc;
+        preview.className = `w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border shadow-xs transition-colors ${theme.box}`;
+        preview.innerHTML = renderAppIconInner(
+          { iconType: State.editorIconType, iconValue: State.editorIconValue },
+          'w-6 h-6'
+        );
+      }
+
+      function updateEditorSizeBadge() {
+        const code = document.getElementById('input-app-code').value;
+        document.getElementById('editor-size-badge').textContent = formatBytes(getByteLength(code));
+      }
+
+      function openEditorModal(appId = null, prefill = null) {
+        const modal = document.getElementById('editor-modal');
+        const existing = appId ? State.localApps.find((a) => a.id === appId) : null;
+        State.editingId = existing ? existing.id : null;
+
+        document.getElementById('editor-modal-title').textContent = existing ? 'ローカルアプリを編集' : '新規アプリを追加（ローカル）';
+        document.getElementById('input-app-name').value = existing ? existing.name : prefill?.name || '';
+        document.getElementById('input-app-desc').value = existing ? existing.description || '' : prefill?.description || '';
+        document.getElementById('input-app-tags').value = existing ? (existing.tags || []).join(', ') : '';
+        document.getElementById('input-app-code').value = existing ? existing.code : prefill?.code || '';
+
+        State.editorIconType = existing ? existing.iconType || 'glyph' : 'glyph';
+        State.editorIconValue = existing ? existing.iconValue || 'terminal' : 'terminal';
+        State.editorColor = existing ? existing.color || 'zinc' : 'zinc';
+
+        document.getElementById('input-custom-icon').value =
+          State.editorIconType === 'text' ? State.editorIconValue : '';
+
+        const delBtn = document.getElementById('btn-delete-in-editor');
+        const dlBtn = document.getElementById('btn-download-single-html');
+        if (existing) {
+          delBtn.classList.remove('hidden');
+          delBtn.classList.add('inline-flex');
+          dlBtn.classList.remove('hidden');
+          dlBtn.classList.add('flex');
+        } else {
+          delBtn.classList.add('hidden');
+          delBtn.classList.remove('inline-flex');
+          dlBtn.classList.add('hidden');
+          dlBtn.classList.remove('flex');
+        }
+
+        renderEditorPickers();
+        updateEditorSizeBadge();
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+
+        setTimeout(() => {
+          const target = existing ? document.getElementById('input-app-code') : document.getElementById('input-app-name');
+          target.focus();
+        }, 60);
+      }
+
+      function closeEditorModal() {
+        const modal = document.getElementById('editor-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        if (!State.runningApp) {
+          document.body.style.overflow = '';
+        }
+        State.editingId = null;
+      }
+
+      async function saveEditorForm(andLaunch = false) {
+        const name = document.getElementById('input-app-name').value.trim();
+        const description = document.getElementById('input-app-desc').value.trim();
+        const rawTags = document.getElementById('input-app-tags').value;
+        const code = document.getElementById('input-app-code').value;
+
+        if (!name) {
+          showToast('アプリ名を入力してください', 'error');
+          document.getElementById('input-app-name').focus();
+          return;
+        }
+        if (!code.trim()) {
+          showToast('HTMLコードを入力してください', 'error');
+          document.getElementById('input-app-code').focus();
+          return;
+        }
+
+        const tags = rawTags
+          .split(/[,、\s]+/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .slice(0, 6);
+
+        const now = Date.now();
+        const existing = State.editingId ? State.localApps.find((a) => a.id === State.editingId) : null;
+
+        let iconValue = State.editorIconValue;
+        if (State.editorIconType === 'text') {
+          const customVal = document.getElementById('input-custom-icon').value.trim();
+          iconValue = customVal || name.slice(0, 2).toUpperCase();
+        }
+
+        const record = {
+          id: existing ? existing.id : generateId(),
+          name,
+          description,
+          tags,
+          iconType: State.editorIconType,
+          iconValue,
+          color: State.editorColor,
+          pinned: existing ? Boolean(existing.pinned) : false,
+          createdAt: existing ? existing.createdAt : now,
+          updatedAt: now,
+          lastLaunchedAt: existing ? existing.lastLaunchedAt || 0 : 0,
+          code
+        };
+
+        try {
+          await StorageService.save(record);
+          if (existing) {
+            const idx = State.localApps.findIndex((a) => a.id === record.id);
+            if (idx >= 0) State.localApps[idx] = record;
+          } else {
+            State.localApps.unshift(record);
+          }
+
+          closeEditorModal();
+          renderApps();
+          showToast(existing ? 'アプリを更新しました' : 'アプリを登録しました');
+
+          if (andLaunch) {
+            launchApp(record.id);
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('保存に失敗しました（容量上限の可能性があります）', 'error');
+        }
+      }
+
+      async function togglePinApp(appId) {
+        const app = getMergedApps().find((a) => a.id === appId);
+        if (!app) return;
+
+        if (app.source === 'github') {
+          const prev = State.ghCustomMeta[app.filename] || {};
+          const nextPinned = !Boolean(prev.pinned);
+          State.ghCustomMeta[app.filename] = { ...prev, pinned: nextPinned, updatedAt: Date.now() };
+          GitHubSyncService.saveCustomMeta(State.ghCustomMeta);
+          renderApps();
+          showToast(nextPinned ? '上部にピン留めしました' : 'ピン留めを解除しました');
+          return;
+        }
+
+        const local = State.localApps.find((a) => a.id === appId);
+        if (!local) return;
+        local.pinned = !local.pinned;
+        try {
+          await StorageService.save(local);
+          renderApps();
+          showToast(local.pinned ? '上部にピン留めしました' : 'ピン留めを解除しました');
+        } catch (err) {
+          showToast('更新に失敗しました', 'error');
+        }
+      }
+
+      function toggleHideGhApp(appId) {
+        const app = getMergedApps().find((a) => a.id === appId && a.source === 'github');
+        if (!app) return;
+        const prev = State.ghCustomMeta[app.filename] || {};
+        const nextHidden = !Boolean(prev.hidden);
+        State.ghCustomMeta[app.filename] = { ...prev, hidden: nextHidden, updatedAt: Date.now() };
+        GitHubSyncService.saveCustomMeta(State.ghCustomMeta);
+        renderApps();
+        showToast(nextHidden ? '一覧から非表示にしました' : '一覧に表示しました');
+      }
+
+      function requestDeleteApp(appId, closeEditorAfter = false) {
+        const app = State.localApps.find((a) => a.id === appId);
+        if (!app) return;
+        openConfirm({
+          title: 'アプリを削除しますか？',
+          message: `「${app.name}」と登録されたHTMLコードが完全に削除されます。この操作は元に戻せません。`,
+          okLabel: '削除する',
+          danger: true,
+          onConfirm: async () => {
+            try {
+              await StorageService.remove(appId);
+              State.localApps = State.localApps.filter((a) => a.id !== appId);
+              if (closeEditorAfter) closeEditorModal();
+              renderApps();
+              showToast('アプリを削除しました');
+            } catch (err) {
+              showToast('削除に失敗しました', 'error');
+            }
+          }
+        });
+      }
+
+      /* -------------------------------------------------------------------
+       * 14. Backup, Restore & Guide Modal Controllers
+       * ------------------------------------------------------------------- */
+      function openBackupModal() {
+        const modal = document.getElementById('backup-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeBackupModal() {
+        const modal = document.getElementById('backup-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      function openGuideModal() {
+        updateSyncStatusUI();
+        const modal = document.getElementById('guide-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeGuideModal() {
+        const modal = document.getElementById('guide-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      function exportBackupJson() {
+        const payload = {
+          app: 'DeckLauncher',
+          version: 2,
+          exportedAt: new Date().toISOString(),
+          count: State.localApps.length,
+          apps: State.localApps,
+          ghCustomMeta: State.ghCustomMeta
+        };
+        const d = new Date();
+        const stamp = [
+          d.getFullYear(),
+          String(d.getMonth() + 1).padStart(2, '0'),
+          String(d.getDate()).padStart(2, '0'),
+          '-',
+          String(d.getHours()).padStart(2, '0'),
+          String(d.getMinutes()).padStart(2, '0')
+        ].join('');
+        triggerDownload(`deck-backup-${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
+        showToast('バックアップを書き出しました');
+      }
+
+      async function handleImportJsonFile(file, mode = 'merge') {
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const importedList = Array.isArray(parsed) ? parsed : parsed.apps;
+          const importedGhMeta = !Array.isArray(parsed) && parsed.ghCustomMeta && typeof parsed.ghCustomMeta === 'object'
+            ? parsed.ghCustomMeta
+            : null;
+
+          if (!Array.isArray(importedList) && !importedGhMeta) {
+            showToast('有効なバックアップ形式ではありません', 'error');
+            return;
+          }
+
+          const sanitized = (importedList || [])
+            .filter((item) => item && typeof item.name === 'string' && typeof item.code === 'string')
+            .map((item) => ({
+              id: typeof item.id === 'string' && item.id ? item.id : generateId(),
+              name: item.name.slice(0, 60),
+              description: typeof item.description === 'string' ? item.description.slice(0, 120) : '',
+              tags: Array.isArray(item.tags) ? item.tags.map(String).slice(0, 6) : [],
+              iconType: item.iconType === 'text' ? 'text' : 'glyph',
+              iconValue: typeof item.iconValue === 'string' && item.iconValue ? item.iconValue : 'terminal',
+              color: COLOR_THEMES[item.color] ? item.color : 'zinc',
+              pinned: Boolean(item.pinned),
+              createdAt: Number(item.createdAt) || Date.now(),
+              updatedAt: Number(item.updatedAt) || Date.now(),
+              lastLaunchedAt: Number(item.lastLaunchedAt) || 0,
+              code: item.code
+            }));
+
+          const executeImport = async () => {
+            if (sanitized.length > 0 || mode === 'replace') {
+              await StorageService.saveMany(sanitized, mode === 'replace');
+              State.localApps = await StorageService.getAll();
+            }
+            if (importedGhMeta) {
+              State.ghCustomMeta =
+                mode === 'replace'
+                  ? { ...importedGhMeta }
+                  : { ...State.ghCustomMeta, ...importedGhMeta };
+              GitHubSyncService.saveCustomMeta(State.ghCustomMeta);
+            }
+            closeBackupModal();
+            renderApps();
+            showToast('バックアップを読み込みました');
+          };
+
+          if (mode === 'replace') {
+            openConfirm({
+              title: '現在のデータをすべて置き換えますか？',
+              message: `現在のローカルアプリとカスタマイズ設定を削除し、バックアップデータで上書きします。`,
+              okLabel: '置き換える',
+              danger: true,
+              onConfirm: executeImport
+            });
+          } else {
+            await executeImport();
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('JSONファイルの解析に失敗しました', 'error');
+        }
+      }
+
+      /* -------------------------------------------------------------------
+       * 15. HTML File Import Helper
+       * ------------------------------------------------------------------- */
+      async function readHtmlFileToEditor(file) {
+        try {
+          const code = await file.text();
+          const titleMatch = code.match(/<title[^>]*>([^<]+)<\/title>/i);
+          const cleanFileName = file.name.replace(/\.(html|htm)$/i, '');
+          const name = titleMatch ? titleMatch[1].trim().slice(0, 60) : cleanFileName.slice(0, 60);
+
+          const modal = document.getElementById('editor-modal');
+          if (!modal.classList.contains('hidden')) {
+            document.getElementById('input-app-code').value = code;
+            if (!document.getElementById('input-app-name').value.trim()) {
+              document.getElementById('input-app-name').value = name;
+            }
+            updateEditorSizeBadge();
+            showToast(`${file.name} を読み込みました`);
+          } else {
+            openEditorModal(null, { name, code });
+            showToast(`${file.name} を取り込みました`);
+          }
+        } catch (err) {
+          showToast('HTMLファイルの読み込みに失敗しました', 'error');
+        }
+      }
+
+      /* -------------------------------------------------------------------
+       * 16. Event Listeners & Wiring
+       * ------------------------------------------------------------------- */
+      function bindEvents() {
+        document.getElementById('btn-toggle-theme').addEventListener('click', () => {
+          const isDark = document.documentElement.classList.toggle('dark');
+          try { localStorage.setItem('deck_theme', isDark ? 'dark' : 'light'); } catch (e) {}
+        });
+
+        document.getElementById('btn-sync-github').addEventListener('click', () => syncGitHubRepo(true));
+        document.getElementById('btn-guide-sync-now').addEventListener('click', () => syncGitHubRepo(true));
+
+        document.getElementById('btn-open-guide').addEventListener('click', openGuideModal);
+        document.getElementById('btn-close-guide').addEventListener('click', closeGuideModal);
+        document.getElementById('guide-modal').addEventListener('click', (e) => {
+          if (e.target.id === 'guide-modal') closeGuideModal();
+        });
+
+        const desktopSearch = document.getElementById('search-input-desktop');
+        const mobileSearch = document.getElementById('search-input-mobile');
+        const onSearch = (e) => {
+          State.searchQuery = e.target.value;
+          desktopSearch.value = State.searchQuery;
+          mobileSearch.value = State.searchQuery;
+          renderApps();
+        };
+        desktopSearch.addEventListener('input', onSearch);
+        mobileSearch.addEventListener('input', onSearch);
+
+        const sortSelect = document.getElementById('sort-select');
+        sortSelect.value = State.sortBy;
+        sortSelect.addEventListener('change', (e) => {
+          State.sortBy = e.target.value;
+          try { localStorage.setItem('deck_sort', State.sortBy); } catch (err) {}
+          renderApps();
+        });
+
+        document.getElementById('btn-view-grid').addEventListener('click', () => {
+          State.viewMode = 'grid';
+          try { localStorage.setItem('deck_view', 'grid'); } catch (e) {}
+          renderApps();
+        });
+        document.getElementById('btn-view-list').addEventListener('click', () => {
+          State.viewMode = 'list';
+          try { localStorage.setItem('deck_view', 'list'); } catch (e) {}
+          renderApps();
+        });
+
+        document.getElementById('tag-filter-bar').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-tag]');
+          if (!btn) return;
+          State.activeTag = btn.dataset.tag;
+          renderApps();
+        });
+
+        const listContainer = document.getElementById('app-list-container');
+        listContainer.addEventListener('click', (e) => {
+          const actionBtn = e.target.closest('button[data-action]');
+          if (actionBtn) {
+            e.stopPropagation();
+            const { action, appId } = actionBtn.dataset;
+            if (action === 'edit') {
+              if (appId.startsWith('gh:')) openGhMetaModal(appId.slice(3));
+              else openEditorModal(appId);
+            } else if (action === 'delete') {
+              requestDeleteApp(appId);
+            } else if (action === 'pin') {
+              togglePinApp(appId);
+            } else if (action === 'toggle-hide') {
+              toggleHideGhApp(appId);
+            }
+            return;
+          }
+          const card = e.target.closest('article[data-app-id]');
+          if (card) launchApp(card.dataset.appId);
+        });
+        listContainer.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            const card = e.target.closest('article[data-app-id]');
+            if (card && e.target === card) {
+              e.preventDefault();
+              launchApp(card.dataset.appId);
+            }
+          }
+        });
+
+        // GitHub Meta Modal controls
+        document.getElementById('btn-close-gh-meta').addEventListener('click', closeGhMetaModal);
+        document.getElementById('btn-cancel-gh-meta').addEventListener('click', closeGhMetaModal);
+        document.getElementById('gh-meta-modal').addEventListener('click', (e) => {
+          if (e.target.id === 'gh-meta-modal') closeGhMetaModal();
+        });
+        document.getElementById('gh-meta-form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          saveGhMetaForm();
+        });
+        document.getElementById('btn-reset-gh-meta').addEventListener('click', resetGhMeta);
+        document.getElementById('gh-glyph-grid').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-gh-glyph]');
+          if (!btn) return;
+          State.ghEditorIconValue = btn.dataset.ghGlyph;
+          renderGhMetaPickers();
+        });
+        document.getElementById('gh-color-grid').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-gh-color]');
+          if (!btn) return;
+          State.ghEditorColor = btn.dataset.ghColor;
+          renderGhMetaPickers();
+        });
+
+        // Local Editor Modal controls
+        document.getElementById('btn-new-app').addEventListener('click', () => openEditorModal(null));
+        document.getElementById('btn-empty-add').addEventListener('click', () => openEditorModal(null));
+        document.getElementById('btn-close-editor').addEventListener('click', closeEditorModal);
+        document.getElementById('btn-cancel-editor').addEventListener('click', closeEditorModal);
+        document.getElementById('editor-modal').addEventListener('click', (e) => {
+          if (e.target.id === 'editor-modal') closeEditorModal();
+        });
+        document.getElementById('editor-form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          saveEditorForm(false);
+        });
+        document.getElementById('btn-save-and-run').addEventListener('click', () => saveEditorForm(true));
+        document.getElementById('btn-delete-in-editor').addEventListener('click', () => {
+          if (State.editingId) requestDeleteApp(State.editingId, true);
+        });
+
+        document.getElementById('tab-icon-glyph').addEventListener('click', () => {
+          State.editorIconType = 'glyph';
+          if (!GLYPH_ICONS[State.editorIconValue]) State.editorIconValue = 'terminal';
+          renderEditorPickers();
+        });
+        document.getElementById('tab-icon-text').addEventListener('click', () => {
+          State.editorIconType = 'text';
+          const customInput = document.getElementById('input-custom-icon');
+          if (!customInput.value.trim()) {
+            const fallback = (document.getElementById('input-app-name').value.trim().slice(0, 2) || 'A').toUpperCase();
+            customInput.value = fallback;
+          }
+          State.editorIconValue = customInput.value.trim();
+          renderEditorPickers();
+        });
+        document.getElementById('panel-icon-glyph').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-glyph]');
+          if (!btn) return;
+          State.editorIconType = 'glyph';
+          State.editorIconValue = btn.dataset.glyph;
+          renderEditorPickers();
+        });
+        document.getElementById('quick-char-grid').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-char]');
+          if (!btn) return;
+          State.editorIconType = 'text';
+          State.editorIconValue = btn.dataset.char;
+          document.getElementById('input-custom-icon').value = btn.dataset.char;
+          renderEditorPickers();
+        });
+        document.getElementById('input-custom-icon').addEventListener('input', (e) => {
+          State.editorIconType = 'text';
+          State.editorIconValue = e.target.value.trim() || 'A';
+          renderEditorPickers();
+        });
+        document.getElementById('color-swatch-grid').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-color]');
+          if (!btn) return;
+          State.editorColor = btn.dataset.color;
+          renderEditorPickers();
+        });
+
+        const codeArea = document.getElementById('input-app-code');
+        codeArea.addEventListener('input', updateEditorSizeBadge);
+        codeArea.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = codeArea.selectionStart;
+            const end = codeArea.selectionEnd;
+            codeArea.value = codeArea.value.substring(0, start) + '  ' + codeArea.value.substring(end);
+            codeArea.selectionStart = codeArea.selectionEnd = start + 2;
+            updateEditorSizeBadge();
+          }
+        });
+
+        document.getElementById('input-html-file').addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (file) readHtmlFileToEditor(file);
+          e.target.value = '';
+        });
+
+        document.getElementById('btn-copy-code').addEventListener('click', () => {
+          const code = document.getElementById('input-app-code').value;
+          if (!code) return;
+          showToast(copyToClipboard(code) ? 'HTMLコードをコピーしました' : 'コピーに失敗しました', copyToClipboard(code) ? 'default' : 'error');
+        });
+
+        document.getElementById('btn-download-single-html').addEventListener('click', () => {
+          const name = (document.getElementById('input-app-name').value.trim() || 'app').replace(/[\\/:*?"<>|]/g, '_');
+          const code = document.getElementById('input-app-code').value;
+          triggerDownload(`${name}.html`, code, 'text/html');
+          showToast(`${name}.html を書き出しました`);
+        });
+
+        // Player HUD controls
+        document.getElementById('btn-player-back').addEventListener('click', closePlayer);
+        document.getElementById('btn-hud-more').addEventListener('click', () => {
+          const extra = document.getElementById('hud-extra-actions');
+          const hidden = extra.classList.contains('hidden');
+          extra.classList.toggle('hidden', !hidden);
+          extra.classList.toggle('flex', hidden);
+        });
+        document.getElementById('btn-player-reload').addEventListener('click', reloadRunningApp);
+        document.getElementById('btn-player-newtab').addEventListener('click', openRunningAppInNewTab);
+        document.getElementById('btn-player-edit').addEventListener('click', () => {
+          const running = State.runningApp;
+          closePlayer();
+          if (!running) return;
+          if (running.source === 'github') openGhMetaModal(running.filename);
+          else openEditorModal(running.id);
+        });
+
+        // Backup modal controls
+        document.getElementById('btn-open-backup').addEventListener('click', openBackupModal);
+        document.getElementById('btn-close-backup').addEventListener('click', closeBackupModal);
+        document.getElementById('backup-modal').addEventListener('click', (e) => {
+          if (e.target.id === 'backup-modal') closeBackupModal();
+        });
+        document.getElementById('btn-export-json').addEventListener('click', exportBackupJson);
+        document.getElementById('input-import-json').addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
+            handleImportJsonFile(file, mode);
+          }
+          e.target.value = '';
+        });
+        document.getElementById('btn-restore-samples').addEventListener('click', async () => {
+          const presets = buildPresetApps();
+          await StorageService.saveMany(presets, false);
+          State.localApps = await StorageService.getAll();
+          closeBackupModal();
+          renderApps();
+          showToast('サンプルアプリを追加しました');
+        });
+
+        // Confirm dialog controls
+        document.getElementById('btn-confirm-cancel').addEventListener('click', closeConfirm);
+        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+          if (e.target.id === 'confirm-modal') closeConfirm();
+        });
+        document.getElementById('btn-confirm-ok').addEventListener('click', async () => {
+          const cb = State.confirmCallback;
+          closeConfirm();
+          if (cb) await cb();
+        });
+
+        // Global Drag & Drop
+        const dropOverlay = document.getElementById('drop-overlay');
+        let dragDepth = 0;
+
+        window.addEventListener('dragenter', (e) => {
+          if (State.runningApp) return;
+          if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) {
+            e.preventDefault();
+            dragDepth++;
+            dropOverlay.classList.remove('hidden');
+            dropOverlay.classList.add('flex');
+          }
+        });
+        window.addEventListener('dragover', (e) => {
+          if (State.runningApp) return;
+          if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) {
+            e.preventDefault();
+          }
+        });
+        window.addEventListener('dragleave', () => {
+          dragDepth = Math.max(0, dragDepth - 1);
+          if (dragDepth === 0) {
+            dropOverlay.classList.add('hidden');
+            dropOverlay.classList.remove('flex');
+          }
+        });
+        window.addEventListener('drop', (e) => {
+          dragDepth = 0;
+          dropOverlay.classList.add('hidden');
+          dropOverlay.classList.remove('flex');
+          if (State.runningApp) return;
+
+          const file = e.dataTransfer?.files?.[0];
+          if (!file) return;
+          e.preventDefault();
+
+          const lower = file.name.toLowerCase();
+          if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+            readHtmlFileToEditor(file);
+          } else if (lower.endsWith('.json')) {
+            handleImportJsonFile(file, 'merge');
+          } else {
+            showToast('.html または .json ファイルに対応しています', 'error');
+          }
+        });
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', (e) => {
+          const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+          if (e.key === 'Escape') {
+            if (!document.getElementById('confirm-modal').classList.contains('hidden')) closeConfirm();
+            else if (!document.getElementById('gh-meta-modal').classList.contains('hidden')) closeGhMetaModal();
+            else if (!document.getElementById('guide-modal').classList.contains('hidden')) closeGuideModal();
+            else if (!document.getElementById('backup-modal').classList.contains('hidden')) closeBackupModal();
+            else if (!document.getElementById('editor-modal').classList.contains('hidden')) closeEditorModal();
+            return;
+          }
+          if (!inInput && !State.runningApp && e.key === '/') {
+            e.preventDefault();
+            const target = window.innerWidth >= 768 ? desktopSearch : mobileSearch;
+            target.focus();
+          }
+        });
+      }
+
+      /* -------------------------------------------------------------------
+       * 17. Bootstrap
+       * ------------------------------------------------------------------- */
+      async function init() {
+        try {
+          await StorageService.init();
+          let apps = await StorageService.getAll();
+
+          const initialized = localStorage.getItem(StorageService.LS_INIT_FLAG);
+          if (apps.length === 0 && !initialized) {
+            const presets = buildPresetApps();
+            await StorageService.saveMany(presets, false);
+            apps = presets;
+            try { localStorage.setItem(StorageService.LS_INIT_FLAG, '1'); } catch (e) {}
+          }
+
+          State.localApps = apps;
+
+          // Load cached GitHub file list & user customizations immediately
+          const cached = GitHubSyncService.loadCache();
+          State.ghFiles = cached.files;
+          State.ghSyncedAt = cached.syncedAt;
+          State.ghCustomMeta = GitHubSyncService.loadCustomMeta();
+
+          initDraggableHud();
+          bindEvents();
+          renderApps();
+
+          // Trigger background sync with GitHub API
+          syncGitHubRepo(false);
+        } catch (err) {
+          console.error('Initialization error:', err);
+          showToast('初期化中にエラーが発生しました', 'error');
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
