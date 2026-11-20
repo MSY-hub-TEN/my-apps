@@ -1,0 +1,3255 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>DESIGN ASSET STUDIO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ==========================================================================
+       iOS / iPadOS System Design Tokens (Light & Dark Mode)
+       ========================================================================== */
+    :root {
+      --bg-base: #F2F2F7;
+      --bg-card: #FFFFFF;
+      --bg-secondary: #EFEFF4;
+      --bg-tertiary: #E5E5EA;
+      --bg-glass: rgba(242, 242, 247, 0.78);
+      --bg-glass-card: rgba(255, 255, 255, 0.72);
+      --text-primary: #1C1C1E;
+      --text-secondary: #636366;
+      --text-tertiary: #8E8E93;
+      --border-hairline: rgba(60, 60, 67, 0.14);
+      --border-strong: rgba(60, 60, 67, 0.24);
+      --accent: #007AFF;
+      --accent-hover: #0066D6;
+      --accent-soft: rgba(0, 122, 255, 0.12);
+      --success: #34C759;
+      --warning: #FF9500;
+      --danger: #FF3B30;
+      --seg-bg: rgba(118, 118, 128, 0.12);
+      --seg-thumb: #FFFFFF;
+      --seg-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.03);
+      --checker-a: #E5E5EA;
+      --checker-b: #FFFFFF;
+      --font-sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    html[data-theme="dark"] {
+      --bg-base: #000000;
+      --bg-card: #1C1C1E;
+      --bg-secondary: #2C2C2E;
+      --bg-tertiary: #3A3A3C;
+      --bg-glass: rgba(22, 22, 24, 0.78);
+      --bg-glass-card: rgba(28, 28, 30, 0.76);
+      --text-primary: #F2F2F7;
+      --text-secondary: #AEAEB2;
+      --text-tertiary: #8E8E93;
+      --border-hairline: rgba(235, 235, 245, 0.14);
+      --border-strong: rgba(235, 235, 245, 0.24);
+      --accent: #0A84FF;
+      --accent-hover: #409CFF;
+      --accent-soft: rgba(10, 132, 255, 0.18);
+      --success: #30D158;
+      --warning: #FF9F0A;
+      --danger: #FF453A;
+      --seg-bg: rgba(118, 118, 128, 0.24);
+      --seg-thumb: #636366;
+      --seg-shadow: 0 3px 8px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.2);
+      --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.28);
+      --checker-a: #2C2C2E;
+      --checker-b: #1C1C1E;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-sys);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* ==========================================================================
+       Frosted Glass Header & Grouped Inset Cards
+       ========================================================================== */
+    .ios-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--bg-glass);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border-bottom: 0.5px solid var(--border-hairline);
+    }
+
+    .ios-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 0.5px solid var(--border-hairline);
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+      transition: background-color 0.25s ease, border-color 0.25s ease;
+    }
+
+    .ios-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      padding: 0 14px 6px;
+      margin: 0;
+    }
+
+    .ios-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      position: relative;
+    }
+
+    .ios-row + .ios-row::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 16px;
+      right: 0;
+      height: 0.5px;
+      background: var(--border-hairline);
+    }
+
+    .ios-row-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px 16px;
+      position: relative;
+    }
+
+    .ios-row-col + .ios-row-col::before,
+    .ios-row + .ios-row-col::before,
+    .ios-row-col + .ios-row::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 16px;
+      right: 0;
+      height: 0.5px;
+      background: var(--border-hairline);
+    }
+
+    /* ==========================================================================
+       iOS Segmented Control
+       ========================================================================== */
+    .ios-segment {
+      display: inline-flex;
+      position: relative;
+      background: var(--seg-bg);
+      border-radius: 10px;
+      padding: 2px;
+      user-select: none;
+      width: 100%;
+    }
+
+    .ios-segment button {
+      flex: 1;
+      position: relative;
+      z-index: 2;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .ios-segment button.active {
+      background: var(--seg-thumb);
+      color: var(--text-primary);
+      box-shadow: var(--seg-shadow);
+    }
+
+    .ios-segment.compact button {
+      font-size: 12px;
+      padding: 5px 8px;
+    }
+
+    /* ==========================================================================
+       iOS Toggle Switch
+       ========================================================================== */
+    .ios-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .ios-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .ios-switch-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      transition: background-color 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .ios-switch-track::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22);
+      transition: transform 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .ios-switch input:checked + .ios-switch-track {
+      background: var(--accent);
+    }
+
+    .ios-switch input:checked + .ios-switch-track::after {
+      transform: translateX(20px);
+    }
+
+    /* ==========================================================================
+       iOS Range Slider
+       ========================================================================== */
+    input[type="range"].ios-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--bg-tertiary);
+      outline: none;
+      cursor: pointer;
+      margin: 6px 0;
+    }
+
+    input[type="range"].ios-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 0 1px rgba(0, 0, 0, 0.12);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"].ios-slider::-webkit-slider-thumb:active {
+      transform: scale(1.12);
+    }
+
+    input[type="range"].ios-slider::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+      cursor: pointer;
+    }
+
+    /* ==========================================================================
+       iOS Buttons, Inputs, Selects & Color Swatches
+       ========================================================================== */
+    .ios-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.15s ease, background-color 0.2s ease;
+      user-select: none;
+    }
+
+    .ios-btn:active {
+      transform: scale(0.97);
+    }
+
+    .ios-btn-primary {
+      background: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .ios-btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .ios-btn-tinted {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .ios-btn-tinted:hover {
+      opacity: 0.85;
+    }
+
+    .ios-btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 0.5px solid var(--border-hairline);
+    }
+
+    .ios-btn-secondary:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .ios-input,
+    .ios-select,
+    .ios-textarea {
+      width: 100%;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 0.5px solid var(--border-hairline);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-family: var(--font-sys);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ios-input:focus,
+    .ios-select:focus,
+    .ios-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .ios-color-input {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 2px solid var(--border-strong);
+      padding: 0;
+      overflow: hidden;
+      cursor: pointer;
+      background: transparent;
+      flex-shrink: 0;
+    }
+
+    .ios-color-input::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    .ios-color-input::-webkit-color-swatch {
+      border: none;
+      border-radius: 999px;
+    }
+
+    .ios-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 0.5px solid var(--border-hairline);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      white-space: nowrap;
+    }
+
+    .ios-chip:hover {
+      border-color: var(--accent);
+    }
+
+    .ios-chip.active {
+      background: var(--accent);
+      color: #FFFFFF;
+      border-color: var(--accent);
+    }
+
+    /* ==========================================================================
+       Checkerboard Transparency Preview & Utility Classes
+       ========================================================================== */
+    .checker-bg {
+      background-color: var(--checker-b);
+      background-image:
+        linear-gradient(45deg, var(--checker-a) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--checker-a) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--checker-a) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--checker-a) 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+    }
+
+    .mono-val {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Dropzone */
+    .ios-dropzone {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: 14px;
+      background: var(--bg-secondary);
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+      cursor: pointer;
+    }
+
+    .ios-dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Toast Notification (iOS Dynamic Island / Pill Style) */
+    #ios-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      z-index: 100;
+      background: rgba(28, 28, 30, 0.92);
+      color: #FFFFFF;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 0.5px solid rgba(255, 255, 255, 0.16);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+      max-width: 90vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    html[data-theme="dark"] #ios-toast {
+      background: rgba(58, 58, 60, 0.94);
+    }
+
+    #ios-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Sticky Preview Column on Desktop */
+    @media (min-width: 1024px) {
+      .desktop-sticky {
+        position: sticky;
+        top: 84px;
+      }
+    }
+
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <!-- ======================================================================
+       HEADER: Frosted Glass System Bar + Navigation Segment + Theme Switch
+       ====================================================================== -->
+  <header class="ios-header">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <!-- Brand + Mobile Theme Toggle -->
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(0,122,255,0.28);">
+            <!-- Simple Line SVG Icon -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+              <path d="M6.5 14v7"></path>
+              <path d="M3 17.5h7"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-[15px] font-bold tracking-tight leading-tight">DESIGN ASSET STUDIO</h1>
+            <p class="text-[11px] leading-tight" style="color: var(--text-secondary);">Local Visual &amp; Design Suite</p>
+          </div>
+        </div>
+
+        <!-- Mobile Theme Toggle -->
+        <button id="theme-toggle-mobile" type="button" class="md:hidden ios-btn ios-btn-secondary !p-2.5 !rounded-full" aria-label="テーマ切り替え">
+          <span class="theme-icon-slot"></span>
+        </button>
+      </div>
+
+      <!-- Primary Studio Navigation (iOS Segmented Control) -->
+      <nav class="ios-segment md:max-w-lg" role="tablist" aria-label="スタジオ切り替え">
+        <button type="button" role="tab" data-tab="palette" class="active" aria-selected="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16c3.3 0 6-2.7 6-6 0-4.9-4.5-8.6-10-8.6z"></path>
+          </svg>
+          <span>Palette</span>
+        </button>
+        <button type="button" role="tab" data-tab="pattern" aria-selected="false">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <path d="M3 9h18"></path>
+            <path d="M3 15h18"></path>
+            <path d="M9 3v18"></path>
+            <path d="M15 3v18"></path>
+          </svg>
+          <span>Pattern</span>
+        </button>
+        <button type="button" role="tab" data-tab="typo" aria-selected="false">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 7 4 4 20 4 20 7"></polyline>
+            <line x1="9" y1="20" x2="15" y2="20"></line>
+            <line x1="12" y1="4" x2="12" y2="20"></line>
+          </svg>
+          <span>Typo</span>
+        </button>
+        <button type="button" role="tab" data-tab="guide" aria-selected="false">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Guide</span>
+        </button>
+      </nav>
+
+      <!-- Desktop Theme Switch -->
+      <div class="hidden md:flex items-center gap-2.5">
+        <button id="theme-toggle-desktop" type="button" class="ios-btn ios-btn-secondary !py-2 !px-3.5 !rounded-full text-xs" aria-label="外観モード切替">
+          <span class="theme-icon-slot"></span>
+          <span id="theme-label-desktop">Light</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       MAIN WORKSPACE CONTAINER
+       ====================================================================== -->
+  <main class="max-w-7xl mx-auto px-4 py-5 pb-16">
+
+    <!-- ====================================================================
+         TAB 1: PALETTE & CONTRAST (色彩抽出＆配色バランスシミュレーター)
+         ==================================================================== -->
+    <section id="tab-palette" class="studio-panel space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+        <!-- Left Column: Extracted Palette Swatches & Contrast UI Simulator -->
+        <div class="lg:col-span-7 space-y-5 desktop-sticky">
+          <!-- Active Palette Card -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5 px-1">
+              <h2 class="ios-section-title !p-0">Active Palette</h2>
+              <div class="flex items-center gap-2">
+                <button id="btn-sync-to-pattern" type="button" class="ios-btn ios-btn-tinted !py-1.5 !px-3 !text-xs !rounded-full">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+                    <path d="M16 16h5v5"></path>
+                  </svg>
+                  Patternへ反映
+                </button>
+                <button id="btn-export-palette" type="button" class="ios-btn ios-btn-primary !py-1.5 !px-3 !text-xs !rounded-full">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  PNG保存
+                </button>
+              </div>
+            </div>
+
+            <div class="ios-card p-4">
+              <!-- Visual Bar Strip -->
+              <div id="palette-strip" class="w-full h-14 rounded-xl overflow-hidden flex mb-4 border" style="border-color: var(--border-hairline);"></div>
+
+              <!-- Swatches Grid -->
+              <div id="palette-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
+            </div>
+          </div>
+
+          <!-- Contrast & Readability UI Test Simulator -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5 px-1">
+              <h2 class="ios-section-title !p-0">Contrast &amp; UI Readability Test</h2>
+              <button id="btn-swap-contrast" type="button" class="ios-btn ios-btn-secondary !py-1.5 !px-3 !text-xs !rounded-full">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="17 1 21 5 17 9"></polyline>
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                  <polyline points="7 23 3 19 7 15"></polyline>
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                </svg>
+                背景・文字を入替
+              </button>
+            </div>
+
+            <div class="ios-card overflow-hidden">
+              <!-- Live UI Preview Canvas Surface -->
+              <div id="contrast-preview-box" class="p-6 transition-colors duration-200" style="background-color: #FFFFFF; color: #1C1C1E;">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <span id="contrast-badge-pill" class="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border">
+                    UI Sample Preview
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <span id="contrast-ratio-val" class="text-xl font-bold mono-val !text-current">16.10 : 1</span>
+                    <span id="contrast-grade-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-md">AAA</span>
+                  </div>
+                </div>
+                <h3 class="text-2xl font-bold tracking-tight mb-1.5">Design Asset Studio</h3>
+                <p class="text-sm leading-relaxed opacity-90 mb-4">
+                  背景色と文字色のコントラスト比をリアルタイムで検証します。見出し、本文テキスト、ボタンラベルの視認性を同時に確認できます。
+                </p>
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <span id="contrast-sample-btn" class="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold">
+                    Primary Action
+                  </span>
+                  <span id="contrast-sample-outline" class="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold border">
+                    Secondary Label
+                  </span>
+                </div>
+              </div>
+
+              <!-- WCAG Score Breakdown + Color Selectors -->
+              <div class="p-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-4" style="border-color: var(--border-hairline); background: var(--bg-card);">
+                <div class="space-y-2.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <label for="contrast-bg-picker" class="text-xs font-semibold" style="color: var(--text-secondary);">背景色 (Background)</label>
+                    <div class="flex items-center gap-2">
+                      <span id="contrast-bg-hex" class="mono-val">#FFFFFF</span>
+                      <input id="contrast-bg-picker" type="color" class="ios-color-input !w-7 !h-7" value="#FFFFFF" />
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <label for="contrast-fg-picker" class="text-xs font-semibold" style="color: var(--text-secondary);">文字色 (Text)</label>
+                    <div class="flex items-center gap-2">
+                      <span id="contrast-fg-hex" class="mono-val">#1C1C1E</span>
+                      <input id="contrast-fg-picker" type="color" class="ios-color-input !w-7 !h-7" value="#1C1C1E" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- WCAG 2.1 Ranks -->
+                <div class="grid grid-cols-3 gap-2 items-center">
+                  <div class="rounded-xl p-2 text-center" style="background: var(--bg-secondary);">
+                    <div class="text-[10px] font-semibold" style="color: var(--text-secondary);">AA Normal</div>
+                    <div id="wcag-aa" class="text-xs font-bold mt-0.5">PASS</div>
+                  </div>
+                  <div class="rounded-xl p-2 text-center" style="background: var(--bg-secondary);">
+                    <div class="text-[10px] font-semibold" style="color: var(--text-secondary);">AA Large</div>
+                    <div id="wcag-aa-large" class="text-xs font-bold mt-0.5">PASS</div>
+                  </div>
+                  <div class="rounded-xl p-2 text-center" style="background: var(--bg-secondary);">
+                    <div class="text-[10px] font-semibold" style="color: var(--text-secondary);">AAA Normal</div>
+                    <div id="wcag-aaa" class="text-xs font-bold mt-0.5">PASS</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Image Extractor & Theme Presets Controls -->
+        <div class="lg:col-span-5 space-y-5">
+          <!-- Image Color Extraction Card -->
+          <div>
+            <h2 class="ios-section-title">Image Color Extraction</h2>
+            <div class="ios-card">
+              <div class="p-4">
+                <div id="palette-dropzone" class="ios-dropzone p-5 text-center relative">
+                  <input id="palette-file-input" type="file" accept="image/*" class="hidden" />
+                  <div id="palette-upload-prompt" class="space-y-2">
+                    <div class="w-10 h-10 mx-auto rounded-full flex items-center justify-center" style="background: var(--accent-soft); color: var(--accent);">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                      </svg>
+                    </div>
+                    <p class="text-sm font-semibold">画像を読み込み・ドロップ</p>
+                    <p class="text-xs" style="color: var(--text-secondary);">PNG / JPG / WEBP 対応（ブラウザ内ローカル処理）</p>
+                  </div>
+                  <div id="palette-image-preview-wrap" class="hidden space-y-3">
+                    <img id="palette-source-thumb" alt="読み込み画像" class="max-h-44 mx-auto rounded-xl object-contain border" style="border-color: var(--border-hairline);" />
+                    <p id="palette-source-name" class="text-xs truncate" style="color: var(--text-secondary);"></p>
+                  </div>
+                </div>
+
+                <div class="flex gap-2 mt-3">
+                  <button id="btn-pick-image" type="button" class="ios-btn ios-btn-tinted flex-1 text-xs">ファイルを選択</button>
+                  <button id="btn-demo-image" type="button" class="ios-btn ios-btn-secondary flex-1 text-xs">サンプル画像生成</button>
+                </div>
+              </div>
+
+              <!-- Extraction Count Control -->
+              <div class="ios-row border-t" style="border-color: var(--border-hairline);">
+                <span class="text-sm font-medium">抽出カラー数</span>
+                <div class="ios-segment compact !w-44" id="extract-count-seg">
+                  <button type="button" data-count="5">5</button>
+                  <button type="button" data-count="6" class="active">6</button>
+                  <button type="button" data-count="7">7</button>
+                  <button type="button" data-count="8">8</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Theme Palette Presets Card -->
+          <div>
+            <div class="flex items-center justify-between mb-1 px-3">
+              <h2 class="ios-section-title !p-0">Theme Presets</h2>
+              <button id="btn-random-palette" type="button" class="text-xs font-semibold" style="color: var(--accent);">ランダム生成</button>
+            </div>
+            <div class="ios-card p-3 space-y-2" id="preset-palette-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Quick Export Text Codes -->
+          <div>
+            <h2 class="ios-section-title">Quick Copy &amp; Export</h2>
+            <div class="ios-card">
+              <div class="ios-row">
+                <div>
+                  <div class="text-sm font-medium">CSS変数としてコピー</div>
+                  <div class="text-xs" style="color: var(--text-secondary);">--palette-1 〜 --palette-n</div>
+                </div>
+                <button id="btn-copy-css-vars" type="button" class="ios-btn ios-btn-secondary !py-1.5 !px-3 text-xs">コピー</button>
+              </div>
+              <div class="ios-row">
+                <div>
+                  <div class="text-sm font-medium">HEX一覧をテキストコピー</div>
+                  <div class="text-xs" style="color: var(--text-secondary);">カンマ区切りHEXコード</div>
+                </div>
+                <button id="btn-copy-hex-list" type="button" class="ios-btn ios-btn-secondary !py-1.5 !px-3 text-xs">コピー</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TAB 2: SEAMLESS PATTERN (シームレス背景・テクスチャ＆パターン工房)
+         ==================================================================== -->
+    <section id="tab-pattern" class="studio-panel hidden space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+        <!-- Left Column: Live Seamless Canvas Preview -->
+        <div class="lg:col-span-7 space-y-4 desktop-sticky">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+            <h2 class="ios-section-title !p-0">Seamless Preview</h2>
+            <div class="flex items-center gap-2">
+              <button id="btn-pat-tile-bounds" type="button" class="ios-chip text-xs">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" stroke-dasharray="4 3"></rect>
+                </svg>
+                1タイル枠
+              </button>
+              <button id="btn-pat-send-typo" type="button" class="ios-btn ios-btn-tinted !py-1.5 !px-3 !text-xs !rounded-full">
+                Typo背景に使用
+              </button>
+            </div>
+          </div>
+
+          <div class="ios-card overflow-hidden">
+            <div id="pattern-preview-wrap" class="checker-bg relative w-full h-[320px] sm:h-[420px] lg:h-[480px] flex items-center justify-center overflow-hidden">
+              <canvas id="pattern-preview-canvas" class="w-full h-full block"></canvas>
+              <div class="absolute bottom-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-medium mono-val" style="background: var(--bg-glass-card); backdrop-filter: blur(12px); color: var(--text-primary); border: 0.5px solid var(--border-hairline);">
+                <span id="pat-meta-badge">TILE 96 x 96 px</span>
+              </div>
+            </div>
+
+            <!-- Export Action Bar -->
+            <div class="p-3.5 border-t flex flex-wrap items-center justify-between gap-2.5" style="border-color: var(--border-hairline);">
+              <div class="flex items-center gap-2">
+                <label for="pat-export-mode" class="text-xs font-semibold" style="color: var(--text-secondary);">書き出し形式</label>
+                <select id="pat-export-mode" class="ios-select !w-auto !py-1.5 !text-xs">
+                  <option value="tile">シームレス単体タイル (原寸)</option>
+                  <option value="tile2x">シームレス単体タイル (2倍高精細)</option>
+                  <option value="repeat4">4x4 リピートシート</option>
+                  <option value="wallpaper-pc">PC壁紙 (1920 x 1080)</option>
+                  <option value="wallpaper-sp">モバイル壁紙 (1170 x 2532)</option>
+                </select>
+              </div>
+              <button id="btn-export-pattern" type="button" class="ios-btn ios-btn-primary !py-2 !px-4 text-xs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                PNGダウンロード
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Pattern Inspector Controls -->
+        <div class="lg:col-span-5 space-y-5">
+          <!-- Pattern Type Selector -->
+          <div>
+            <h2 class="ios-section-title">Pattern Style</h2>
+            <div class="ios-card p-3">
+              <div id="pattern-type-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button type="button" class="ios-chip justify-center !py-2.5 active" data-pat-type="gingham">ギンガムチェック</button>
+                <button type="button" class="ios-chip justify-center !py-2.5" data-pat-type="stripe">ストライプ</button>
+                <button type="button" class="ios-chip justify-center !py-2.5" data-pat-type="dots">水玉ドット</button>
+                <button type="button" class="ios-chip justify-center !py-2.5" data-pat-type="grid">方眼グリッド</button>
+                <button type="button" class="ios-chip justify-center !py-2.5" data-pat-type="retro">レトロタイル</button>
+                <button type="button" class="ios-chip justify-center !py-2.5" data-pat-type="paper">紙ノイズ質感</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Geometry Sliders -->
+          <div>
+            <h2 class="ios-section-title">Geometry &amp; Texture</h2>
+            <div class="ios-card">
+              <div class="ios-row-col">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>タイルサイズ</span>
+                  <span id="val-pat-size" class="mono-val">96 px</span>
+                </div>
+                <input id="pat-size" type="range" class="ios-slider" min="24" max="240" step="4" value="96" />
+              </div>
+
+              <div class="ios-row-col">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>線の太さ / 密度</span>
+                  <span id="val-pat-stroke" class="mono-val">28%</span>
+                </div>
+                <input id="pat-stroke" type="range" class="ios-slider" min="4" max="85" step="1" value="28" />
+              </div>
+
+              <div class="ios-row-col">
+                <div class="flex justify-between items-center text-xs font-medium">
+                  <span>回転角度</span>
+                  <div class="flex items-center gap-2">
+                    <button type="button" class="text-[11px] font-semibold px-1.5 py-0.5 rounded" style="background: var(--bg-secondary); color: var(--accent);" data-angle-snap="0">0°</button>
+                    <button type="button" class="text-[11px] font-semibold px-1.5 py-0.5 rounded" style="background: var(--bg-secondary); color: var(--accent);" data-angle-snap="45">45°</button>
+                    <button type="button" class="text-[11px] font-semibold px-1.5 py-0.5 rounded" style="background: var(--bg-secondary); color: var(--accent);" data-angle-snap="90">90°</button>
+                    <span id="val-pat-angle" class="mono-val w-9 text-right">0°</span>
+                  </div>
+                </div>
+                <input id="pat-angle" type="range" class="ios-slider" min="0" max="180" step="1" value="0" />
+              </div>
+
+              <div class="ios-row-col">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>紙の質感オーバーレイ</span>
+                  <span id="val-pat-grain" class="mono-val">12%</span>
+                </div>
+                <input id="pat-grain" type="range" class="ios-slider" min="0" max="100" step="1" value="12" />
+              </div>
+
+              <div class="ios-row">
+                <div>
+                  <div class="text-sm font-medium">背景透過</div>
+                  <div class="text-xs" style="color: var(--text-secondary);">背景ベースを透明にしてPNG出力</div>
+                </div>
+                <label class="ios-switch">
+                  <input id="pat-transparent" type="checkbox" />
+                  <span class="ios-switch-track"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Colors & Palette Sync -->
+          <div>
+            <div class="flex items-center justify-between mb-1 px-3">
+              <h2 class="ios-section-title !p-0">Pattern Colors</h2>
+              <div class="flex items-center gap-3">
+                <button id="btn-pat-pull-palette" type="button" class="text-xs font-semibold" style="color: var(--accent);">パレット連動</button>
+                <button id="btn-pat-shuffle-colors" type="button" class="text-xs font-semibold" style="color: var(--text-secondary);">配色シャッフル</button>
+              </div>
+            </div>
+
+            <div class="ios-card">
+              <!-- Quick Palette Swatch Strip -->
+              <div class="p-3 border-b" style="border-color: var(--border-hairline);">
+                <div class="text-[11px] font-medium mb-2" style="color: var(--text-secondary);">現在のパレットからワンタップ適用（クリックでメイン色へ）</div>
+                <div id="pat-palette-bar" class="flex flex-wrap gap-2"></div>
+              </div>
+
+              <div class="ios-row">
+                <span class="text-sm font-medium">ベース背景色</span>
+                <div class="flex items-center gap-2">
+                  <span id="hex-pat-bg" class="mono-val">#F8FAFC</span>
+                  <input id="pat-color-bg" type="color" class="ios-color-input" value="#F8FAFC" />
+                </div>
+              </div>
+              <div class="ios-row">
+                <span class="text-sm font-medium">メインカラー</span>
+                <div class="flex items-center gap-2">
+                  <span id="hex-pat-c1" class="mono-val">#007AFF</span>
+                  <input id="pat-color-1" type="color" class="ios-color-input" value="#007AFF" />
+                </div>
+              </div>
+              <div class="ios-row">
+                <span class="text-sm font-medium">サブカラー</span>
+                <div class="flex items-center gap-2">
+                  <span id="hex-pat-c2" class="mono-val">#5AC8FA</span>
+                  <input id="pat-color-2" type="color" class="ios-color-input" value="#5AC8FA" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TAB 3: TYPO & LOGO (タイポグラフィ＆ロゴ素材ジェネレーター)
+         ==================================================================== -->
+    <section id="tab-typo" class="studio-panel hidden space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+        <!-- Left Column: Live Logo Canvas & Export Controls -->
+        <div class="lg:col-span-7 space-y-4 desktop-sticky">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+            <h2 class="ios-section-title !p-0">Logo &amp; Banner Canvas</h2>
+            <div class="ios-segment compact !w-auto" id="typo-bg-mode-seg">
+              <button type="button" data-bg="transparent" class="active">透過</button>
+              <button type="button" data-bg="pattern">背景合成</button>
+              <button type="button" data-bg="light">白</button>
+              <button type="button" data-bg="dark">黒</button>
+            </div>
+          </div>
+
+          <div class="ios-card overflow-hidden">
+            <div id="typo-preview-wrap" class="checker-bg relative w-full h-[300px] sm:h-[380px] lg:h-[440px] flex items-center justify-center overflow-hidden p-3">
+              <canvas id="typo-preview-canvas" class="max-w-full max-h-full block"></canvas>
+              <div class="absolute bottom-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-medium mono-val" style="background: var(--bg-glass-card); backdrop-filter: blur(12px); color: var(--text-primary); border: 0.5px solid var(--border-hairline);">
+                <span id="typo-dim-badge">AUTO FIT</span>
+              </div>
+            </div>
+
+            <!-- Export Panel -->
+            <div class="p-4 border-t space-y-3" style="border-color: var(--border-hairline);">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <label for="typo-export-preset" class="text-xs font-semibold" style="color: var(--text-secondary);">書き出しサイズ (合成 / PNG用)</label>
+                <select id="typo-export-preset" class="ios-select !w-auto !py-1.5 !text-xs">
+                  <option value="fit">ロゴ自動フィット (余白最適化)</option>
+                  <option value="banner">バナー / OGP (1200 x 630)</option>
+                  <option value="square">正方形アイコン (1024 x 1024)</option>
+                  <option value="desktop">PC壁紙 (1920 x 1080)</option>
+                  <option value="mobile">モバイル壁紙 (1170 x 2532)</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button id="btn-export-logo-png" type="button" class="ios-btn ios-btn-primary text-xs">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  ロゴ透過PNG
+                </button>
+                <button id="btn-export-logo-svg" type="button" class="ios-btn ios-btn-tinted text-xs">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                  </svg>
+                  ロゴ単体SVG
+                </button>
+                <button id="btn-export-composite-png" type="button" class="ios-btn ios-btn-secondary text-xs">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    <path d="M3 15l6-6 4 4 8-8"></path>
+                  </svg>
+                  背景＋ロゴ合成PNG
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Typo Inspector Controls -->
+        <div class="lg:col-span-5 space-y-5">
+          <!-- Text & Typography -->
+          <div>
+            <div class="flex items-center justify-between mb-1 px-3">
+              <h2 class="ios-section-title !p-0">Text &amp; Font</h2>
+              <button id="btn-typo-pull-palette" type="button" class="text-xs font-semibold" style="color: var(--accent);">パレット配色を適用</button>
+            </div>
+            <div class="ios-card">
+              <div class="ios-row-col">
+                <label for="typo-text" class="text-xs font-semibold" style="color: var(--text-secondary);">タイトル・文字入力（改行対応）</label>
+                <textarea id="typo-text" rows="2" class="ios-textarea resize-none" placeholder="任意の英単語・日本語を入力">DESIGN STUDIO</textarea>
+              </div>
+
+              <div class="ios-row">
+                <span class="text-sm font-medium">フォントスタイル</span>
+                <select id="typo-font" class="ios-select !w-48 !py-1.5 text-xs">
+                  <option value="sans">Modern Sans (ゴシック)</option>
+                  <option value="rounded">Soft Rounded (丸ゴシック)</option>
+                  <option value="serif">Editorial Serif (明朝)</option>
+                  <option value="display">Heavy Display (極太ロゴ)</option>
+                  <option value="mono">Techno Mono (等幅)</option>
+                  <option value="italicSerif">Classic Italic (斜体セリフ)</option>
+                </select>
+              </div>
+
+              <div class="ios-row">
+                <span class="text-sm font-medium">ウェイト / スタイル</span>
+                <div class="flex items-center gap-2">
+                  <div class="ios-segment compact !w-36" id="typo-weight-seg">
+                    <button type="button" data-weight="500">Med</button>
+                    <button type="button" data-weight="700">Bold</button>
+                    <button type="button" data-weight="900" class="active">Black</button>
+                  </div>
+                  <button id="btn-typo-italic" type="button" class="ios-chip !px-2.5 !py-1.5 text-xs italic font-serif">I</button>
+                </div>
+              </div>
+
+              <div class="ios-row-col">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>文字サイズ</span>
+                  <span id="val-typo-size" class="mono-val">76 px</span>
+                </div>
+                <input id="typo-size" type="range" class="ios-slider" min="24" max="180" step="1" value="76" />
+              </div>
+
+              <div class="ios-row-col">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>文字間隔 (カーニング)</span>
+                  <span id="val-typo-tracking" class="mono-val">4 px</span>
+                </div>
+                <input id="typo-tracking" type="range" class="ios-slider" min="-12" max="48" step="1" value="4" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Fill & Gradient -->
+          <div>
+            <h2 class="ios-section-title">Fill &amp; Gradient</h2>
+            <div class="ios-card">
+              <div class="ios-row">
+                <span class="text-sm font-medium">塗りスタイル</span>
+                <div class="ios-segment compact !w-44" id="typo-fill-seg">
+                  <button type="button" data-fill="solid">単色</button>
+                  <button type="button" data-fill="gradient" class="active">グラデーション</button>
+                </div>
+              </div>
+
+              <div id="typo-solid-row" class="ios-row hidden">
+                <span class="text-sm font-medium">文字カラー</span>
+                <div class="flex items-center gap-2">
+                  <span id="hex-typo-solid" class="mono-val">#007AFF</span>
+                  <input id="typo-fill-solid" type="color" class="ios-color-input" value="#007AFF" />
+                </div>
+              </div>
+
+              <div id="typo-grad-rows">
+                <div class="ios-row">
+                  <span class="text-sm font-medium">グラデーション色</span>
+                  <div class="flex items-center gap-3">
+                    <input id="typo-grad-1" type="color" class="ios-color-input" value="#007AFF" title="開始色" />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-tertiary);">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                    <input id="typo-grad-2" type="color" class="ios-color-input" value="#5856D6" title="終了色" />
+                  </div>
+                </div>
+                <div class="ios-row-col">
+                  <div class="flex justify-between text-xs font-medium">
+                    <span>グラデーション角度</span>
+                    <span id="val-typo-grad-angle" class="mono-val">135°</span>
+                  </div>
+                  <input id="typo-grad-angle" type="range" class="ios-slider" min="0" max="360" step="5" value="135" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi-Outline (多重縁取り) -->
+          <div>
+            <h2 class="ios-section-title">Multi Outline</h2>
+            <div class="ios-card">
+              <!-- Outline 1 -->
+              <div class="ios-row">
+                <span class="text-sm font-medium">第1縁取り (内側)</span>
+                <div class="flex items-center gap-3">
+                  <input id="typo-s1-color" type="color" class="ios-color-input !w-7 !h-7" value="#FFFFFF" />
+                  <label class="ios-switch">
+                    <input id="typo-s1-on" type="checkbox" checked />
+                    <span class="ios-switch-track"></span>
+                  </label>
+                </div>
+              </div>
+              <div id="typo-s1-controls" class="ios-row-col">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>第1縁取りの太さ</span>
+                  <span id="val-typo-s1-w" class="mono-val">10 px</span>
+                </div>
+                <input id="typo-s1-w" type="range" class="ios-slider" min="1" max="32" step="1" value="10" />
+              </div>
+
+              <!-- Outline 2 -->
+              <div class="ios-row">
+                <span class="text-sm font-medium">第2縁取り (外側)</span>
+                <div class="flex items-center gap-3">
+                  <input id="typo-s2-color" type="color" class="ios-color-input !w-7 !h-7" value="#1C1C1E" />
+                  <label class="ios-switch">
+                    <input id="typo-s2-on" type="checkbox" checked />
+                    <span class="ios-switch-track"></span>
+                  </label>
+                </div>
+              </div>
+              <div id="typo-s2-controls" class="ios-row-col">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>第2縁取りの太さ</span>
+                  <span id="val-typo-s2-w" class="mono-val">18 px</span>
+                </div>
+                <input id="typo-s2-w" type="range" class="ios-slider" min="2" max="54" step="1" value="18" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Drop Shadow & Neon Glow -->
+          <div>
+            <h2 class="ios-section-title">Shadow &amp; Neon Glow</h2>
+            <div class="ios-card">
+              <div class="ios-row">
+                <span class="text-sm font-medium">ドロップシャドウ</span>
+                <div class="flex items-center gap-3">
+                  <input id="typo-shadow-color" type="color" class="ios-color-input !w-7 !h-7" value="#000000" />
+                  <label class="ios-switch">
+                    <input id="typo-shadow-on" type="checkbox" checked />
+                    <span class="ios-switch-track"></span>
+                  </label>
+                </div>
+              </div>
+              <div id="typo-shadow-controls" class="ios-row-col">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <div class="flex justify-between text-[11px] font-medium"><span>ぼかし</span><span id="val-sh-blur" class="mono-val">14</span></div>
+                    <input id="typo-sh-blur" type="range" class="ios-slider" min="0" max="50" value="14" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] font-medium"><span>不透明度</span><span id="val-sh-alpha" class="mono-val">35%</span></div>
+                    <input id="typo-sh-alpha" type="range" class="ios-slider" min="5" max="100" value="35" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] font-medium"><span>Xオフセット</span><span id="val-sh-x" class="mono-val">0</span></div>
+                    <input id="typo-sh-x" type="range" class="ios-slider" min="-30" max="30" value="0" />
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] font-medium"><span>Yオフセット</span><span id="val-sh-y" class="mono-val">8</span></div>
+                    <input id="typo-sh-y" type="range" class="ios-slider" min="-30" max="30" value="8" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Neon Glow -->
+              <div class="ios-row">
+                <span class="text-sm font-medium">ネオン発光</span>
+                <div class="flex items-center gap-3">
+                  <input id="typo-neon-color" type="color" class="ios-color-input !w-7 !h-7" value="#0A84FF" />
+                  <label class="ios-switch">
+                    <input id="typo-neon-on" type="checkbox" />
+                    <span class="ios-switch-track"></span>
+                  </label>
+                </div>
+              </div>
+              <div id="typo-neon-controls" class="ios-row-col hidden">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>発光強度</span>
+                  <span id="val-neon-int" class="mono-val">26 px</span>
+                </div>
+                <input id="typo-neon-int" type="range" class="ios-slider" min="6" max="64" value="26" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Warp (アーチ・波打ち変形) -->
+          <div>
+            <h2 class="ios-section-title">Warp Transform</h2>
+            <div class="ios-card">
+              <div class="p-3">
+                <div class="ios-segment compact" id="typo-warp-seg">
+                  <button type="button" data-warp="none" class="active">なし</button>
+                  <button type="button" data-warp="archUp">アーチ上</button>
+                  <button type="button" data-warp="archDown">アーチ下</button>
+                  <button type="button" data-warp="wave">波打ち</button>
+                </div>
+              </div>
+              <div id="typo-warp-controls" class="ios-row-col hidden border-t" style="border-color: var(--border-hairline);">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>変形強度</span>
+                  <span id="val-warp-amt" class="mono-val">40%</span>
+                </div>
+                <input id="typo-warp-amt" type="range" class="ios-slider" min="5" max="100" value="40" />
+
+                <div id="typo-wave-freq-wrap" class="hidden mt-2">
+                  <div class="flex justify-between text-xs font-medium">
+                    <span>波の周期</span>
+                    <span id="val-warp-freq" class="mono-val">1.5</span>
+                  </div>
+                  <input id="typo-warp-freq" type="range" class="ios-slider" min="0.5" max="4" step="0.1" value="1.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TAB 4: REFERENCE / GUIDE (独立解説タブ)
+         ==================================================================== -->
+    <section id="tab-guide" class="studio-panel hidden max-w-4xl mx-auto space-y-6">
+      <div>
+        <h2 class="ios-section-title">Studio Workflow</h2>
+        <div class="ios-card">
+          <div class="ios-row-col">
+            <h3 class="text-sm font-semibold">3つの工房を連携した制作フロー</h3>
+            <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+              本アプリはすべての処理をブラウザ標準のCanvas APIとローカル計算のみで実行し、画像やテキストを外部サーバーへ一切送信しません。
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              <div class="p-3 rounded-xl" style="background: var(--bg-secondary);">
+                <div class="text-xs font-bold mb-1" style="color: var(--accent);">01. Palette</div>
+                <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+                  写真やプリセットから5〜8色の代表色を抽出・決定し、背景色と文字色のコントラスト比を検証します。
+                </p>
+              </div>
+              <div class="p-3 rounded-xl" style="background: var(--bg-secondary);">
+                <div class="text-xs font-bold mb-1" style="color: var(--accent);">02. Pattern</div>
+                <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+                  「Patternへ反映」または「パレット連動」で配色を引き継ぎ、端が綺麗に繋がるシームレス背景を生成します。
+                </p>
+              </div>
+              <div class="p-3 rounded-xl" style="background: var(--bg-secondary);">
+                <div class="text-xs font-bold mb-1" style="color: var(--accent);">03. Typo &amp; Logo</div>
+                <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+                  多重縁取り・ネオン・変形を加えたロゴを作成し、透過PNG/SVG単体またはパターンと合成した壁紙・バナーとして書き出します。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ios-section-title">Color &amp; WCAG Contrast Reference</h2>
+        <div class="ios-card">
+          <div class="ios-row-col">
+            <div class="text-sm font-semibold">色彩抽出アルゴリズム</div>
+            <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+              画像を縮小サンプリングし、K-Means++クラスタリングにより代表カラーを自動抽出します。スウォッチのHEXまたはRGBをタップするとクリップボードへ即座にコピーされ、BG / TEXTボタンでコントラスト検証へ割り当てられます。
+            </p>
+          </div>
+          <div class="ios-row-col">
+            <div class="text-sm font-semibold">WCAG 2.1 コントラスト比と判定基準</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs pt-1" style="color: var(--text-secondary);">
+              <div class="p-2.5 rounded-xl" style="background: var(--bg-secondary);">
+                <span class="font-bold" style="color: var(--success);">AAA (7.0 : 1 以上)</span> — 極めて高い視認性。長文本文や高精度なUIに推奨。
+              </div>
+              <div class="p-2.5 rounded-xl" style="background: var(--bg-secondary);">
+                <span class="font-bold" style="color: var(--accent);">AA Normal (4.5 : 1 以上)</span> — 標準的な本文テキストの推奨基準。
+              </div>
+              <div class="p-2.5 rounded-xl" style="background: var(--bg-secondary);">
+                <span class="font-bold" style="color: var(--warning);">AA Large (3.0 : 1 以上)</span> — 見出し・太字・大型UI部品向けの最低基準。
+              </div>
+              <div class="p-2.5 rounded-xl" style="background: var(--bg-secondary);">
+                <span class="font-bold" style="color: var(--danger);">FAIL (3.0 : 1 未満)</span> — 文字の判読が困難。背景と文字の明度差を広げてください。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ios-section-title">Seamless Pattern Specifications</h2>
+        <div class="ios-card">
+          <div class="ios-row-col">
+            <div class="text-sm font-semibold">シームレス描画と書き出し</div>
+            <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+              ギンガムチェック、ストライプ、水玉、方眼グリッド、レトロタイル、紙のノイズ質感はすべてCanvasの数式計算で生成されます。角度スナップ（0° / 45° / 90°）を利用すると、単体タイルPNGをCSSの background-repeat やデザインツールのパターン塗りつぶしに使用した際、継ぎ目なく連続します。
+            </p>
+          </div>
+          <div class="ios-row-col">
+            <div class="text-sm font-semibold">背景透過と質感オーバーレイ</div>
+            <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+              「背景透過」をONにすると、模様の線やドットだけを残して透過PNGとして書き出せます。任意の背景色の上に重ねるオーバーレイ素材として活用できます。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ios-section-title">Typography &amp; Export Formats</h2>
+        <div class="ios-card">
+          <div class="ios-row-col">
+            <div class="text-sm font-semibold">カーニング・多重縁取り・変形</div>
+            <p class="text-xs leading-relaxed" style="color: var(--text-secondary);">
+              文字間隔（カーニング）は1文字単位の配置座標で制御され、アーチ変形や波打ち変形時にも自然な間隔を維持します。多重縁取りは「第2縁取り（外側）→ 第1縁取り（内側）→ 塗り」のレイヤー順で全文字を一括描画するため、文字同士の境界が重ならず綺麗に仕上がります。
+            </p>
+          </div>
+          <div class="ios-row-col">
+            <div class="text-sm font-semibold">PNG と SVG 書き出しの使い分け</div>
+            <ul class="text-xs leading-relaxed space-y-1 list-disc pl-4" style="color: var(--text-secondary);">
+              <li><strong>ロゴ透過PNG</strong>: そのままアイコン・動画テロップ・資料へ貼り付けられる高解像度ラスター画像。</li>
+              <li><strong>ロゴ単体SVG</strong>: 拡大縮小しても劣化しないベクター形式。グラデーション・多重縁取り・ネオンフィルター・文字変形座標を保持して出力します。</li>
+              <li><strong>背景＋ロゴ合成PNG</strong>: Pattern工房で作成したシームレス背景とロゴを合成し、バナー（1200×630）やPC/モバイル壁紙解像度で書き出します。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- iOS Pill Toast Notification -->
+  <div id="ios-toast" role="status" aria-live="polite">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--success); flex-shrink: 0;">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span id="ios-toast-msg">Copied</span>
+  </div>
+
+  <!-- ======================================================================
+       APPLICATION LOGIC (Pure Local Vanilla JS + Canvas API)
+       ====================================================================== -->
+  <script>
+    (() => {
+      'use strict';
+
+      /* --------------------------------------------------------------------
+         1. THEME PRESETS & GLOBAL STATE
+         -------------------------------------------------------------------- */
+      const PALETTE_PRESETS = [
+        { name: 'System Minimal', tag: 'Clean UI', colors: ['#F2F2F7', '#FFFFFF', '#007AFF', '#5856D6', '#34C759', '#1C1C1E'] },
+        { name: 'Y2K Pastel', tag: 'Dreamy', colors: ['#FFF0F6', '#FFD6E7', '#B8E1FF', '#D4C1FF', '#9BF6FF', '#4A4E69'] },
+        { name: 'Classic Stationery', tag: 'Paper & Ink', colors: ['#F7F3E9', '#E6DEC8', '#C85A32', '#2E4C6D', '#5C7A58', '#232320'] },
+        { name: 'Cyber Signal', tag: 'Neon Tech', colors: ['#0B0F19', '#162033', '#00F5D4', '#00BBF9', '#F15BB5', '#FEE440'] },
+        { name: 'Monochrome Swiss', tag: 'Editorial', colors: ['#FFFFFF', '#E5E5E5', '#A3A3A3', '#525252', '#171717', '#FF3B30'] },
+        { name: 'Nordic Calm', tag: 'Soft Matte', colors: ['#F4F6F5', '#DCE4E1', '#8AA29E', '#4F6D7A', '#C0D6DF', '#2B3A42'] },
+        { name: 'Retro Café', tag: 'Mid-Century', colors: ['#FDF6EC', '#F3D5B5', '#D4A373', '#BC4749', '#386641', '#2B2118'] }
+      ];
+
+      const FONT_STACKS = {
+        sans: '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Inter", sans-serif',
+        rounded: '"Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", "Quicksand", "Yu Gothic", sans-serif',
+        serif: '"Hiragino Mincho ProN", "Yu Mincho", Georgia, "Times New Roman", serif',
+        display: 'Impact, "Arial Black", "Hiragino Kaku Gothic StdN", sans-serif',
+        mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+        italicSerif: 'Georgia, "Times New Roman", "Hiragino Mincho ProN", serif'
+      };
+
+      const state = {
+        theme: 'light',
+        activeTab: 'palette',
+        palette: {
+          colors: [...PALETTE_PRESETS[0].colors],
+          extractCount: 6,
+          bgHex: '#FFFFFF',
+          fgHex: '#1C1C1E',
+          sourceImage: null
+        },
+        pattern: {
+          type: 'gingham',
+          tileSize: 96,
+          strokePct: 28,
+          angle: 0,
+          grain: 12,
+          transparentBg: false,
+          bgColor: '#F2F2F7',
+          color1: '#007AFF',
+          color2: '#5856D6',
+          showTileBounds: false
+        },
+        typo: {
+          text: 'DESIGN STUDIO',
+          fontKey: 'sans',
+          weight: '900',
+          italic: false,
+          size: 76,
+          tracking: 4,
+          fillMode: 'gradient',
+          solidColor: '#007AFF',
+          grad1: '#007AFF',
+          grad2: '#5856D6',
+          gradAngle: 135,
+          stroke1On: true,
+          stroke1Color: '#FFFFFF',
+          stroke1Width: 10,
+          stroke2On: true,
+          stroke2Color: '#1C1C1E',
+          stroke2Width: 18,
+          shadowOn: true,
+          shadowColor: '#000000',
+          shadowBlur: 14,
+          shadowAlpha: 35,
+          shadowX: 0,
+          shadowY: 8,
+          neonOn: false,
+          neonColor: '#0A84FF',
+          neonIntensity: 26,
+          warpMode: 'none',
+          warpAmount: 40,
+          waveFreq: 1.5,
+          previewBg: 'transparent',
+          exportPreset: 'fit'
+        }
+      };
+
+      /* --------------------------------------------------------------------
+         2. UTILITY FUNCTIONS (Color Math, Clipboard, Toast, Sliders, Download)
+         -------------------------------------------------------------------- */
+      let toastTimer = null;
+      function showToast(message) {
+        const el = document.getElementById('ios-toast');
+        const msg = document.getElementById('ios-toast-msg');
+        msg.textContent = message;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.classList.remove('show');
+        }, 2100);
+      }
+
+      function copyToClipboard(text, label) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (ok) {
+            showToast(label || `コピーしました: ${text}`);
+            return;
+          }
+        } catch (err) {
+          // Fallback to Clipboard API if allowed
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast(label || `コピーしました: ${text}`);
+          }).catch(() => {
+            showToast('コピーに失敗しました');
+          });
+        }
+      }
+
+      function clamp(val, min, max) {
+        return Math.min(max, Math.max(min, val));
+      }
+
+      function hexToRgb(hex) {
+        const clean = hex.replace('#', '').trim();
+        const full = clean.length === 3
+          ? clean.split('').map(c => c + c).join('')
+          : clean.padEnd(6, '0').slice(0, 6);
+        const num = parseInt(full, 16);
+        return {
+          r: (num >> 16) & 255,
+          g: (num >> 8) & 255,
+          b: num & 255
+        };
+      }
+
+      function rgbToHex(r, g, b) {
+        const toHex = (n) => clamp(Math.round(n), 0, 255).toString(16).padStart(2, '0');
+        return ('#' + toHex(r) + toHex(g) + toHex(b)).toUpperCase();
+      }
+
+      function hexToRgba(hex, alpha) {
+        const { r, g, b } = hexToRgb(hex);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function relativeLuminance(hex) {
+        const { r, g, b } = hexToRgb(hex);
+        const toLin = (c) => {
+          const v = c / 255;
+          return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b);
+      }
+
+      function getContrastRatio(hex1, hex2) {
+        const l1 = relativeLuminance(hex1);
+        const l2 = relativeLuminance(hex2);
+        const bright = Math.max(l1, l2);
+        const dark = Math.min(l1, l2);
+        return (bright + 0.05) / (dark + 0.05);
+      }
+
+      function getReadableTextColor(bgHex) {
+        return relativeLuminance(bgHex) > 0.42 ? '#1C1C1E' : '#FFFFFF';
+      }
+
+      function updateSliderTrack(input) {
+        const min = parseFloat(input.min || 0);
+        const max = parseFloat(input.max || 100);
+        const val = parseFloat(input.value || 0);
+        const pct = ((val - min) / (max - min)) * 100;
+        input.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--bg-tertiary) ${pct}%, var(--bg-tertiary) 100%)`;
+      }
+
+      function initAllSliderTracks() {
+        document.querySelectorAll('input[type="range"].ios-slider').forEach(updateSliderTrack);
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      function downloadCanvasPNG(canvas, filename) {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            downloadBlob(blob, filename);
+            showToast(`書き出しました: ${filename}`);
+          }
+        }, 'image/png');
+      }
+
+      /* --------------------------------------------------------------------
+         3. THEME & NAVIGATION HANDLING
+         -------------------------------------------------------------------- */
+      const SUN_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+      const MOON_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
+      function applyTheme(theme) {
+        state.theme = theme;
+        document.documentElement.setAttribute('data-theme', theme);
+        document.querySelectorAll('.theme-icon-slot').forEach(slot => {
+          slot.innerHTML = theme === 'dark' ? MOON_SVG : SUN_SVG;
+        });
+        const label = document.getElementById('theme-label-desktop');
+        if (label) label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+        initAllSliderTracks();
+      }
+
+      function toggleTheme() {
+        applyTheme(state.theme === 'light' ? 'dark' : 'light');
+      }
+
+      function switchTab(tabName) {
+        state.activeTab = tabName;
+        document.querySelectorAll('nav.ios-segment button[data-tab]').forEach(btn => {
+          const active = btn.dataset.tab === tabName;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-selected', String(active));
+        });
+        document.querySelectorAll('.studio-panel').forEach(panel => {
+          panel.classList.toggle('hidden', panel.id !== `tab-${tabName}`);
+        });
+
+        // Trigger canvas resize/render when switching to Canvas tabs
+        if (tabName === 'pattern') {
+          renderPatternPaletteBar();
+          requestAnimationFrame(renderPatternPreview);
+        } else if (tabName === 'typo') {
+          requestAnimationFrame(renderTypoPreview);
+        }
+      }
+
+      /* --------------------------------------------------------------------
+         4. STUDIO 1: PALETTE & CONTRAST (K-Means++ Extraction & WCAG Simulator)
+         -------------------------------------------------------------------- */
+      function extractColorsFromImage(img, k) {
+        const off = document.createElement('canvas');
+        const maxSide = 110;
+        const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+        const w = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+        const h = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+        off.width = w;
+        off.height = h;
+        const ctx = off.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0, 0, w, h).data;
+
+        const pixels = [];
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] < 128) continue;
+          pixels.push([data[i], data[i + 1], data[i + 2]]);
+        }
+        if (pixels.length === 0) return [...PALETTE_PRESETS[0].colors].slice(0, k);
+
+        // K-Means++ deterministic-friendly centroid initialization (furthest point sampling)
+        const centroids = [pixels[Math.floor(pixels.length / 2)]];
+        while (centroids.length < k) {
+          let bestIdx = 0;
+          let maxDist = -1;
+          const step = Math.max(1, Math.floor(pixels.length / 450));
+          for (let i = 0; i < pixels.length; i += step) {
+            const p = pixels[i];
+            let minD = Infinity;
+            for (let c = 0; c < centroids.length; c++) {
+              const cc = centroids[c];
+              const d = (p[0] - cc[0]) ** 2 + (p[1] - cc[1]) ** 2 + (p[2] - cc[2]) ** 2;
+              if (d < minD) minD = d;
+            }
+            if (minD > maxDist) {
+              maxDist = minD;
+              bestIdx = i;
+            }
+          }
+          centroids.push([...pixels[bestIdx]]);
+        }
+
+        // K-Means iterations
+        for (let iter = 0; iter < 10; iter++) {
+          const sums = Array.from({ length: k }, () => [0, 0, 0, 0]);
+          for (let i = 0; i < pixels.length; i++) {
+            const p = pixels[i];
+            let nearest = 0;
+            let bestD = Infinity;
+            for (let c = 0; c < k; c++) {
+              const cc = centroids[c];
+              const d = (p[0] - cc[0]) ** 2 + (p[1] - cc[1]) ** 2 + (p[2] - cc[2]) ** 2;
+              if (d < bestD) {
+                bestD = d;
+                nearest = c;
+              }
+            }
+            sums[nearest][0] += p[0];
+            sums[nearest][1] += p[1];
+            sums[nearest][2] += p[2];
+            sums[nearest][3] += 1;
+          }
+          for (let c = 0; c < k; c++) {
+            if (sums[c][3] > 0) {
+              centroids[c] = [
+                sums[c][0] / sums[c][3],
+                sums[c][1] / sums[c][3],
+                sums[c][2] / sums[c][3]
+              ];
+            }
+          }
+        }
+
+        // Sort from brightest to darkest for clean palette readability
+        const hexes = centroids
+          .map(c => rgbToHex(c[0], c[1], c[2]))
+          .sort((a, b) => relativeLuminance(b) - relativeLuminance(a));
+
+        return hexes;
+      }
+
+      function generateDemoImageAndExtract() {
+        const c = document.createElement('canvas');
+        c.width = 480;
+        c.height = 300;
+        const ctx = c.getContext('2d');
+        const hBase = Math.floor(Math.random() * 360);
+        const grad = ctx.createLinearGradient(0, 0, 480, 300);
+        grad.addColorStop(0, `hsl(${hBase}, 78%, 88%)`);
+        grad.addColorStop(0.5, `hsl(${(hBase + 45) % 360}, 72%, 62%)`);
+        grad.addColorStop(1, `hsl(${(hBase + 195) % 360}, 58%, 22%)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 480, 300);
+
+        // Abstract geometric art shapes
+        const accents = [
+          `hsl(${(hBase + 150) % 360}, 85%, 65%)`,
+          `hsl(${(hBase + 310) % 360}, 80%, 72%)`,
+          `hsl(${(hBase + 25) % 360}, 90%, 95%)`,
+          `hsl(${(hBase + 220) % 360}, 45%, 16%)`
+        ];
+        ctx.fillStyle = accents[0];
+        ctx.beginPath();
+        ctx.arc(130, 150, 88, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = accents[1];
+        ctx.beginPath();
+        ctx.arc(340, 110, 68, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = accents[2];
+        ctx.fillRect(210, 175, 190, 75);
+
+        ctx.fillStyle = accents[3];
+        ctx.beginPath();
+        ctx.moveTo(40, 260);
+        ctx.lineTo(220, 260);
+        ctx.lineTo(130, 120);
+        ctx.closePath();
+        ctx.fill();
+
+        const img = new Image();
+        img.onload = () => {
+          state.palette.sourceImage = img;
+          showSourceImagePreview(c.toDataURL('image/png'), 'Generated Sample Art');
+          applyExtractedFromSource();
+          showToast('サンプル画像から代表カラーを抽出しました');
+        };
+        img.src = c.toDataURL('image/png');
+      }
+
+      function showSourceImagePreview(src, name) {
+        document.getElementById('palette-upload-prompt').classList.add('hidden');
+        const wrap = document.getElementById('palette-image-preview-wrap');
+        wrap.classList.remove('hidden');
+        document.getElementById('palette-source-thumb').src = src;
+        document.getElementById('palette-source-name').textContent = name;
+      }
+
+      function applyExtractedFromSource() {
+        if (!state.palette.sourceImage) return;
+        const extracted = extractColorsFromImage(state.palette.sourceImage, state.palette.extractCount);
+        state.palette.colors = extracted;
+        autoAssignContrastPair(extracted);
+        renderPaletteStudio();
+      }
+
+      function autoAssignContrastPair(colors) {
+        if (!colors || colors.length < 2) return;
+        // Pick lightest & darkest pair from palette for initial readability check
+        const sorted = [...colors].sort((a, b) => relativeLuminance(b) - relativeLuminance(a));
+        state.palette.bgHex = sorted[0];
+        state.palette.fgHex = sorted[sorted.length - 1];
+      }
+
+      function handleImageFile(file) {
+        if (!file || !file.type.startsWith('image/')) {
+          showToast('画像ファイルを選択してください');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            state.palette.sourceImage = img;
+            showSourceImagePreview(e.target.result, file.name);
+            applyExtractedFromSource();
+            showToast(`${state.palette.extractCount}色の代表カラーを抽出しました`);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function renderPaletteStudio() {
+        const strip = document.getElementById('palette-strip');
+        const grid = document.getElementById('palette-grid');
+        strip.innerHTML = '';
+        grid.innerHTML = '';
+
+        state.palette.colors.forEach((hex, idx) => {
+          const { r, g, b } = hexToRgb(hex);
+          const rgbStr = `rgb(${r}, ${g}, ${b})`;
+
+          // Top visual strip segment
+          const seg = document.createElement('div');
+          seg.className = 'flex-1 h-full cursor-pointer transition-all hover:opacity-90';
+          seg.style.backgroundColor = hex;
+          seg.title = `${hex} をコピー`;
+          seg.addEventListener('click', () => copyToClipboard(hex, `HEXコピー: ${hex}`));
+          strip.appendChild(seg);
+
+          // Swatch card
+          const card = document.createElement('div');
+          card.className = 'rounded-2xl overflow-hidden border flex flex-col';
+          card.style.borderColor = 'var(--border-hairline)';
+          card.style.background = 'var(--bg-secondary)';
+
+          card.innerHTML = `
+            <div class="h-16 relative flex items-end justify-end p-1.5" style="background-color: ${hex};">
+              <label class="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer" style="background: rgba(255,255,255,0.28); backdrop-filter: blur(6px); color: ${getReadableTextColor(hex)};" title="色を微調整">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <input type="color" value="${hex}" data-edit-idx="${idx}" class="sr-only" />
+              </label>
+            </div>
+            <div class="p-2.5 space-y-1.5">
+              <button type="button" data-copy-hex="${hex}" class="w-full text-left font-bold text-xs mono-val !text-[var(--text-primary)] hover:underline truncate">${hex}</button>
+              <button type="button" data-copy-rgb="${rgbStr}" class="w-full text-left text-[10px] mono-val hover:underline truncate">${rgbStr}</button>
+              <div class="grid grid-cols-2 gap-1 pt-1">
+                <button type="button" data-set-bg="${hex}" class="text-[10px] font-semibold py-1 rounded-lg border transition-colors" style="border-color: var(--border-hairline); background: var(--bg-card); color: var(--text-primary);">背景</button>
+                <button type="button" data-set-fg="${hex}" class="text-[10px] font-semibold py-1 rounded-lg border transition-colors" style="border-color: var(--border-hairline); background: var(--bg-card); color: var(--text-primary);">文字</button>
+              </div>
+            </div>
+          `;
+
+          card.querySelector('[data-copy-hex]').addEventListener('click', () => copyToClipboard(hex, `HEXコピー: ${hex}`));
+          card.querySelector('[data-copy-rgb]').addEventListener('click', () => copyToClipboard(rgbStr, `RGBコピー: ${rgbStr}`));
+          card.querySelector('[data-set-bg]').addEventListener('click', () => {
+            state.palette.bgHex = hex;
+            renderContrastSimulator();
+            showToast(`背景色を ${hex} に設定`);
+          });
+          card.querySelector('[data-set-fg]').addEventListener('click', () => {
+            state.palette.fgHex = hex;
+            renderContrastSimulator();
+            showToast(`文字色を ${hex} に設定`);
+          });
+          card.querySelector('[data-edit-idx]').addEventListener('input', (e) => {
+            state.palette.colors[idx] = e.target.value.toUpperCase();
+            renderPaletteStudio();
+            renderPatternPaletteBar();
+          });
+
+          grid.appendChild(card);
+        });
+
+        renderContrastSimulator();
+        renderPatternPaletteBar();
+      }
+
+      function renderContrastSimulator() {
+        const bg = state.palette.bgHex;
+        const fg = state.palette.fgHex;
+        const ratio = getContrastRatio(bg, fg);
+        const ratioText = `${ratio.toFixed(2)} : 1`;
+
+        const box = document.getElementById('contrast-preview-box');
+        box.style.backgroundColor = bg;
+        box.style.color = fg;
+
+        const pill = document.getElementById('contrast-badge-pill');
+        pill.style.borderColor = hexToRgba(fg, 0.35);
+
+        const sampleBtn = document.getElementById('contrast-sample-btn');
+        sampleBtn.style.backgroundColor = fg;
+        sampleBtn.style.color = bg;
+
+        const sampleOutline = document.getElementById('contrast-sample-outline');
+        sampleOutline.style.borderColor = hexToRgba(fg, 0.45);
+        sampleOutline.style.color = fg;
+
+        document.getElementById('contrast-ratio-val').textContent = ratioText;
+        document.getElementById('contrast-bg-hex').textContent = bg;
+        document.getElementById('contrast-fg-hex').textContent = fg;
+        document.getElementById('contrast-bg-picker').value = bg;
+        document.getElementById('contrast-fg-picker').value = fg;
+
+        // Grade badge
+        const gradeEl = document.getElementById('contrast-grade-badge');
+        let grade = 'FAIL';
+        let gradeBg = '#FF3B30';
+        if (ratio >= 7.0) {
+          grade = 'AAA';
+          gradeBg = '#34C759';
+        } else if (ratio >= 4.5) {
+          grade = 'AA';
+          gradeBg = '#007AFF';
+        } else if (ratio >= 3.0) {
+          grade = 'AA Large';
+          gradeBg = '#FF9500';
+        }
+        gradeEl.textContent = grade;
+        gradeEl.style.backgroundColor = gradeBg;
+        gradeEl.style.color = '#FFFFFF';
+
+        const setRank = (id, pass) => {
+          const el = document.getElementById(id);
+          el.textContent = pass ? 'PASS' : 'FAIL';
+          el.style.color = pass ? 'var(--success)' : 'var(--danger)';
+        };
+        setRank('wcag-aa', ratio >= 4.5);
+        setRank('wcag-aa-large', ratio >= 3.0);
+        setRank('wcag-aaa', ratio >= 7.0);
+      }
+
+      function renderPresetList() {
+        const container = document.getElementById('preset-palette-list');
+        container.innerHTML = '';
+        PALETTE_PRESETS.forEach((preset) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'w-full flex items-center justify-between gap-3 p-2.5 rounded-xl transition-colors text-left';
+          btn.style.background = 'var(--bg-secondary)';
+          btn.innerHTML = `
+            <div class="min-w-0">
+              <div class="text-xs font-semibold truncate">${preset.name}</div>
+              <div class="text-[10px]" style="color: var(--text-secondary);">${preset.tag}</div>
+            </div>
+            <div class="flex items-center -space-x-1 shrink-0">
+              ${preset.colors.map(c => `<span class="w-5 h-5 rounded-full border" style="background:${c}; border-color: var(--bg-card);"></span>`).join('')}
+            </div>
+          `;
+          btn.addEventListener('click', () => {
+            state.palette.colors = [...preset.colors];
+            autoAssignContrastPair(state.palette.colors);
+            renderPaletteStudio();
+            showToast(`プリセット「${preset.name}」を適用しました`);
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      function generateRandomHarmoniousPalette() {
+        const count = state.palette.extractCount;
+        const baseHue = Math.floor(Math.random() * 360);
+        const mode = Math.floor(Math.random() * 3); // analogous, split-complementary, triadic
+        const colors = [];
+
+        function hslToHex(h, s, l) {
+          h = ((h % 360) + 360) % 360;
+          s /= 100;
+          l /= 100;
+          const k = n => (n + h / 30) % 12;
+          const a = s * Math.min(l, 1 - l);
+          const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+          return rgbToHex(f(0) * 255, f(8) * 255, f(4) * 255);
+        }
+
+        // Light neutral, dark neutral, plus harmonized tones
+        colors.push(hslToHex(baseHue, 18, 95));
+        colors.push(hslToHex(baseHue, 22, 16));
+        for (let i = 2; i < count; i++) {
+          let hueOffset = 0;
+          if (mode === 0) hueOffset = (i - 1) * 28;
+          else if (mode === 1) hueOffset = i % 2 === 0 ? 150 : 210;
+          else hueOffset = (i - 1) * 120;
+          const sat = clamp(50 + ((i * 17) % 38), 35, 88);
+          const lit = clamp(32 + ((i * 23) % 52), 28, 82);
+          colors.push(hslToHex(baseHue + hueOffset, sat, lit));
+        }
+
+        colors.sort((a, b) => relativeLuminance(b) - relativeLuminance(a));
+        state.palette.colors = colors;
+        autoAssignContrastPair(colors);
+        renderPaletteStudio();
+        showToast('ランダム配色パレットを生成しました');
+      }
+
+      function exportPaletteCardPNG() {
+        const colors = state.palette.colors;
+        const w = 1200;
+        const h = 680;
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d');
+
+        // Card Background
+        const isDark = state.theme === 'dark';
+        ctx.fillStyle = isDark ? '#141416' : '#F5F5F7';
+        ctx.fillRect(0, 0, w, h);
+
+        // Header text
+        ctx.fillStyle = isDark ? '#F2F2F7' : '#1C1C1E';
+        ctx.font = '700 32px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('COLOR PALETTE', 56, 76);
+
+        ctx.fillStyle = isDark ? '#8E8E93' : '#636366';
+        ctx.font = '500 18px ui-monospace, monospace';
+        ctx.fillText(`DESIGN ASSET STUDIO  |  ${colors.length} COLORS`, 56, 108);
+
+        // Swatch columns
+        const padX = 56;
+        const gap = 16;
+        const usableW = w - padX * 2;
+        const colW = (usableW - gap * (colors.length - 1)) / colors.length;
+        const topY = 148;
+        const swatchH = 390;
+
+        colors.forEach((hex, idx) => {
+          const x = padX + idx * (colW + gap);
+          const { r, g, b } = hexToRgb(hex);
+
+          // Rounded card container
+          ctx.fillStyle = isDark ? '#1C1C1E' : '#FFFFFF';
+          roundRectPath(ctx, x, topY, colW, swatchH + 86, 20);
+          ctx.fill();
+
+          // Color block
+          ctx.fillStyle = hex;
+          roundRectPath(ctx, x + 8, topY + 8, colW - 16, swatchH - 12, 14);
+          ctx.fill();
+
+          // Labels
+          ctx.fillStyle = isDark ? '#F2F2F7' : '#1C1C1E';
+          ctx.font = '700 19px ui-monospace, monospace';
+          ctx.fillText(hex, x + 14, topY + swatchH + 34);
+
+          ctx.fillStyle = isDark ? '#AEAEB2' : '#636366';
+          ctx.font = '500 13px ui-monospace, monospace';
+          ctx.fillText(`${r}, ${g}, ${b}`, x + 14, topY + swatchH + 60);
+        });
+
+        downloadCanvasPNG(c, `palette-${colors.length}colors.png`);
+      }
+
+      function roundRectPath(ctx, x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      /* --------------------------------------------------------------------
+         5. STUDIO 2: SEAMLESS PATTERN GENERATOR (Canvas Mathematical Tiling)
+         -------------------------------------------------------------------- */
+      function seededNoise(seed) {
+        let s = seed % 2147483647;
+        if (s <= 0) s += 2147483646;
+        return () => {
+          s = (s * 16807) % 2147483647;
+          return (s - 1) / 2147483646;
+        };
+      }
+
+      /**
+       * Renders a single mathematically seamless base tile (unrotated)
+       * or a diagonal-seamless tile when angle is 45/135.
+       */
+      function createSeamlessTileCanvas(scaleMult = 1) {
+        const p = state.pattern;
+        const size = Math.max(24, Math.round(p.tileSize * scaleMult));
+        const tile = document.createElement('canvas');
+        tile.width = size;
+        tile.height = size;
+        const ctx = tile.getContext('2d');
+
+        // Base background
+        if (!p.transparentBg) {
+          ctx.fillStyle = p.bgColor;
+          ctx.fillRect(0, 0, size, size);
+        } else {
+          ctx.clearRect(0, 0, size, size);
+        }
+
+        const ratio = p.strokePct / 100;
+        const thickness = Math.max(1, size * ratio);
+
+        if (p.type === 'gingham') {
+          const band = Math.max(2, size * clamp(ratio, 0.1, 0.65));
+          // Vertical band
+          ctx.fillStyle = hexToRgba(p.color1, 0.45);
+          ctx.fillRect(0, 0, band, size);
+          // Horizontal band
+          ctx.fillStyle = hexToRgba(p.color2, 0.45);
+          ctx.fillRect(0, 0, size, band);
+          // Accent intersection richness
+          ctx.fillStyle = hexToRgba(p.color1, 0.28);
+          ctx.fillRect(0, 0, band, band);
+          // Fine weave sub-lines
+          ctx.strokeStyle = hexToRgba(p.color2, 0.25);
+          ctx.lineWidth = Math.max(1, scaleMult);
+          ctx.beginPath();
+          ctx.moveTo(band, 0); ctx.lineTo(band, size);
+          ctx.moveTo(0, band); ctx.lineTo(size, band);
+          ctx.stroke();
+        } else if (p.type === 'stripe') {
+          const band = Math.max(2, size * clamp(ratio, 0.05, 0.85));
+          ctx.fillStyle = p.color1;
+          ctx.fillRect(0, 0, band, size);
+          // Secondary thin pinstripe
+          const subW = Math.max(1, band * 0.22);
+          ctx.fillStyle = p.color2;
+          ctx.fillRect(band + (size - band) * 0.5 - subW * 0.5, 0, subW, size);
+        } else if (p.type === 'dots') {
+          // Staggered polka dots wrapped around tile edges for 100% seamlessness
+          const r = Math.max(1.5, size * clamp(ratio, 0.06, 0.44) * 0.48);
+          const pts = [
+            { x: size * 0.25, y: size * 0.25, c: p.color1 },
+            { x: size * 0.75, y: size * 0.75, c: p.color1 },
+            { x: size * 0.75, y: size * 0.25, c: p.color2, small: true },
+            { x: size * 0.25, y: size * 0.75, c: p.color2, small: true }
+          ];
+          pts.forEach(pt => {
+            ctx.fillStyle = pt.c;
+            const rad = pt.small ? r * 0.52 : r;
+            for (let ox = -1; ox <= 1; ox++) {
+              for (let oy = -1; oy <= 1; oy++) {
+                ctx.beginPath();
+                ctx.arc(pt.x + ox * size, pt.y + oy * size, rad, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          });
+        } else if (p.type === 'grid') {
+          // Technical engineering graph grid (major + minor subdivisions)
+          const lw = Math.max(1, size * clamp(ratio, 0.02, 0.25) * 0.22);
+          const sub = size / 4;
+          ctx.strokeStyle = hexToRgba(p.color2, 0.42);
+          ctx.lineWidth = Math.max(0.75, lw * 0.5);
+          for (let i = 1; i < 4; i++) {
+            const pos = Math.round(sub * i) + 0.5;
+            ctx.beginPath();
+            ctx.moveTo(pos, 0); ctx.lineTo(pos, size);
+            ctx.moveTo(0, pos); ctx.lineTo(size, pos);
+            ctx.stroke();
+          }
+          // Major grid line on edges (split half on each side or crisp 0)
+          ctx.strokeStyle = p.color1;
+          ctx.lineWidth = lw;
+          ctx.beginPath();
+          ctx.moveTo(lw * 0.5, 0); ctx.lineTo(lw * 0.5, size);
+          ctx.moveTo(0, lw * 0.5); ctx.lineTo(size, lw * 0.5);
+          ctx.stroke();
+        } else if (p.type === 'retro') {
+          // Mid-century geometric retro tile (quarter arcs & diamond center)
+          const lw = Math.max(1.5, size * clamp(ratio, 0.05, 0.45) * 0.28);
+          const half = size / 2;
+
+          // Subtle checker quadrant
+          ctx.fillStyle = hexToRgba(p.color2, 0.22);
+          ctx.fillRect(0, 0, half, half);
+          ctx.fillRect(half, half, half, half);
+
+          // Concentric corner arcs (seamless across tile boundaries)
+          ctx.strokeStyle = p.color1;
+          ctx.lineWidth = lw;
+          const corners = [
+            [0, 0], [size, 0], [0, size], [size, size]
+          ];
+          corners.forEach(([cx, cy]) => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, half * 0.72, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+
+          // Center diamond
+          ctx.fillStyle = p.color2;
+          const d = half * clamp(ratio, 0.15, 0.55);
+          ctx.beginPath();
+          ctx.moveTo(half, half - d);
+          ctx.lineTo(half + d, half);
+          ctx.lineTo(half, half + d);
+          ctx.lineTo(half - d, half);
+          ctx.closePath();
+          ctx.fill();
+        } else if (p.type === 'paper') {
+          // Seamless organic paper fibers & subtle speckle texture
+          const rand = seededNoise(1024 + size);
+          const density = Math.round(size * size * (0.04 + ratio * 0.14));
+          for (let i = 0; i < density; i++) {
+            const x = rand() * size;
+            const y = rand() * size;
+            const r = (0.4 + rand() * 1.1) * scaleMult;
+            ctx.fillStyle = rand() > 0.5 ? hexToRgba(p.color1, 0.08 + rand() * 0.12) : hexToRgba(p.color2, 0.08 + rand() * 0.14);
+            ctx.fillRect(x, y, r, r);
+          }
+          // Fine seamless paper fibers (wrapped around tile edges)
+          const fibers = Math.round(28 + ratio * 95);
+          ctx.lineCap = 'round';
+          for (let i = 0; i < fibers; i++) {
+            const x = rand() * size;
+            const y = rand() * size;
+            const len = (4 + rand() * 14) * scaleMult;
+            const ang = rand() * Math.PI * 2;
+            const dx = Math.cos(ang) * len;
+            const dy = Math.sin(ang) * len;
+            ctx.strokeStyle = rand() > 0.45 ? hexToRgba(p.color1, 0.14) : hexToRgba(p.color2, 0.16);
+            ctx.lineWidth = (0.6 + rand() * 0.8) * scaleMult;
+            for (let ox = -1; ox <= 1; ox++) {
+              for (let oy = -1; oy <= 1; oy++) {
+                ctx.beginPath();
+                ctx.moveTo(x + ox * size, y + oy * size);
+                ctx.lineTo(x + dx + ox * size, y + dy + oy * size);
+                ctx.stroke();
+              }
+            }
+          }
+        }
+
+        // Optional universal paper grain overlay (seamless per tile)
+        if (p.grain > 0 && p.type !== 'paper') {
+          const rand = seededNoise(9973);
+          const count = Math.round((size * size) * (p.grain / 100) * 0.18);
+          const alpha = (p.grain / 100) * 0.14;
+          for (let i = 0; i < count; i++) {
+            const gx = rand() * size;
+            const gy = rand() * size;
+            ctx.fillStyle = rand() > 0.5 ? `rgba(0,0,0,${alpha})` : `rgba(255,255,255,${alpha})`;
+            ctx.fillRect(gx, gy, scaleMult, scaleMult);
+          }
+        }
+
+        return tile;
+      }
+
+      /**
+       * Fills any target canvas with the current pattern + rotation angle.
+       */
+      function fillCanvasWithPattern(targetCtx, width, height, scaleMult = 1) {
+        const tile = createSeamlessTileCanvas(scaleMult);
+        const pat = targetCtx.createPattern(tile, 'repeat');
+        targetCtx.save();
+        if (!state.pattern.transparentBg) {
+          targetCtx.fillStyle = state.pattern.bgColor;
+          targetCtx.fillRect(0, 0, width, height);
+        } else {
+          targetCtx.clearRect(0, 0, width, height);
+        }
+        const rad = (state.pattern.angle * Math.PI) / 180;
+        if (pat && typeof pat.setTransform === 'function') {
+          const m = new DOMMatrix();
+          m.translateSelf(width / 2, height / 2);
+          m.rotateSelf(state.pattern.angle);
+          m.translateSelf(-width / 2, -height / 2);
+          pat.setTransform(m);
+          targetCtx.fillStyle = pat;
+          targetCtx.fillRect(0, 0, width, height);
+        } else {
+          // Fallback rotation fill
+          const diag = Math.hypot(width, height);
+          targetCtx.translate(width / 2, height / 2);
+          targetCtx.rotate(rad);
+          targetCtx.fillStyle = pat;
+          targetCtx.fillRect(-diag, -diag, diag * 2, diag * 2);
+        }
+        targetCtx.restore();
+        return tile;
+      }
+
+      function renderPatternPreview() {
+        const wrap = document.getElementById('pattern-preview-wrap');
+        const canvas = document.getElementById('pattern-preview-canvas');
+        if (!wrap || !canvas || wrap.clientWidth === 0) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = wrap.clientWidth;
+        const h = wrap.clientHeight;
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        fillCanvasWithPattern(ctx, w, h, 1);
+
+        // Optional 1-tile boundary indicator
+        if (state.pattern.showTileBounds) {
+          const ts = state.pattern.tileSize;
+          const cx = w / 2 - ts / 2;
+          const cy = h / 2 - ts / 2;
+          ctx.save();
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate((state.pattern.angle * Math.PI) / 180);
+          ctx.translate(-w / 2, -h / 2);
+          ctx.strokeStyle = '#007AFF';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.strokeRect(cx, cy, ts, ts);
+          ctx.restore();
+        }
+
+        document.getElementById('pat-meta-badge').textContent =
+          `TILE ${state.pattern.tileSize} x ${state.pattern.tileSize} px · ${state.pattern.angle}°${state.pattern.transparentBg ? ' · ALPHA' : ''}`;
+      }
+
+      function renderPatternPaletteBar() {
+        const bar = document.getElementById('pat-palette-bar');
+        if (!bar) return;
+        bar.innerHTML = '';
+        state.palette.colors.forEach((hex) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'w-7 h-7 rounded-full border transition-transform hover:scale-110';
+          btn.style.backgroundColor = hex;
+          btn.style.borderColor = 'var(--border-strong)';
+          btn.title = `${hex} をメインカラーに適用`;
+          btn.addEventListener('click', () => {
+            state.pattern.color2 = state.pattern.color1;
+            state.pattern.color1 = hex;
+            syncPatternColorInputs();
+            renderPatternPreview();
+            showToast(`メインカラーに ${hex} を適用`);
+          });
+          bar.appendChild(btn);
+        });
+      }
+
+      function syncPatternColorInputs() {
+        document.getElementById('pat-color-bg').value = state.pattern.bgColor;
+        document.getElementById('pat-color-1').value = state.pattern.color1;
+        document.getElementById('pat-color-2').value = state.pattern.color2;
+        document.getElementById('hex-pat-bg').textContent = state.pattern.bgColor;
+        document.getElementById('hex-pat-c1').textContent = state.pattern.color1;
+        document.getElementById('hex-pat-c2').textContent = state.pattern.color2;
+      }
+
+      function pullPaletteToPattern(shuffle = false) {
+        const cols = [...state.palette.colors];
+        if (cols.length < 3) return;
+        if (shuffle) {
+          for (let i = cols.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cols[i], cols[j]] = [cols[j], cols[i]];
+          }
+          state.pattern.bgColor = cols[0];
+          state.pattern.color1 = cols[1];
+          state.pattern.color2 = cols[2];
+        } else {
+          // Smart assignment: lightest for bg, mid-vibrant for c1 & c2
+          const sorted = [...cols].sort((a, b) => relativeLuminance(b) - relativeLuminance(a));
+          state.pattern.bgColor = sorted[0];
+          state.pattern.color1 = sorted[Math.min(2, sorted.length - 1)];
+          state.pattern.color2 = sorted[Math.min(3, sorted.length - 1)];
+        }
+        syncPatternColorInputs();
+        renderPatternPreview();
+      }
+
+      function exportPatternPNG() {
+        const mode = document.getElementById('pat-export-mode').value;
+        const p = state.pattern;
+        const out = document.createElement('canvas');
+
+        if (mode === 'tile' || mode === 'tile2x') {
+          const mult = mode === 'tile2x' ? 2 : 1;
+          // If angle is 45 or 135, use sqrt(2) periodic square for exact seamless tiling
+          const angleMod = ((p.angle % 180) + 180) % 180;
+          if (angleMod === 0 || angleMod === 90) {
+            const base = createSeamlessTileCanvas(mult);
+            out.width = base.width;
+            out.height = base.height;
+            const ctx = out.getContext('2d');
+            if (angleMod === 90) {
+              ctx.translate(out.width / 2, out.height / 2);
+              ctx.rotate(Math.PI / 2);
+              ctx.drawImage(base, -base.width / 2, -base.height / 2);
+            } else {
+              ctx.drawImage(base, 0, 0);
+            }
+          } else if (angleMod === 45 || angleMod === 135) {
+            const diagTile = Math.round(p.tileSize * mult * Math.SQRT2);
+            out.width = diagTile;
+            out.height = diagTile;
+            const ctx = out.getContext('2d');
+            fillCanvasWithPattern(ctx, diagTile, diagTile, mult);
+          } else {
+            const s = p.tileSize * mult * 2;
+            out.width = s;
+            out.height = s;
+            const ctx = out.getContext('2d');
+            fillCanvasWithPattern(ctx, s, s, mult);
+          }
+          downloadCanvasPNG(out, `pattern-${p.type}-${out.width}x${out.height}.png`);
+        } else if (mode === 'repeat4') {
+          const s = p.tileSize * 4;
+          out.width = s;
+          out.height = s;
+          const ctx = out.getContext('2d');
+          fillCanvasWithPattern(ctx, s, s, 1);
+          downloadCanvasPNG(out, `pattern-${p.type}-sheet-${s}px.png`);
+        } else if (mode === 'wallpaper-pc') {
+          out.width = 1920;
+          out.height = 1080;
+          const ctx = out.getContext('2d');
+          fillCanvasWithPattern(ctx, 1920, 1080, 1);
+          downloadCanvasPNG(out, `wallpaper-pc-${p.type}.png`);
+        } else if (mode === 'wallpaper-sp') {
+          out.width = 1170;
+          out.height = 2532;
+          const ctx = out.getContext('2d');
+          fillCanvasWithPattern(ctx, 1170, 2532, 1.5);
+          downloadCanvasPNG(out, `wallpaper-mobile-${p.type}.png`);
+        }
+      }
+
+      /* --------------------------------------------------------------------
+         6. STUDIO 3: TYPOGRAPHY & LOGO GENERATOR (Canvas + Vector SVG Engine)
+         -------------------------------------------------------------------- */
+      function getTypoFontCSS(sizeOverride) {
+        const t = state.typo;
+        const style = (t.italic || t.fontKey === 'italicSerif') ? 'italic' : 'normal';
+        const stack = FONT_STACKS[t.fontKey] || FONT_STACKS.sans;
+        const sz = sizeOverride || t.size;
+        return `${style} ${t.weight} ${sz}px ${stack}`;
+      }
+
+      /**
+       * Computes per-glyph positions, rotations, and overall bounding box
+       * for multi-line text with kerning, arch, or wave warp.
+       */
+      function computeGlyphLayout(ctx, scale = 1) {
+        const t = state.typo;
+        const lines = (t.text || ' ').split('\n');
+        const fontSize = t.size * scale;
+        const tracking = t.tracking * scale;
+        const lineHeight = fontSize * 1.24;
+
+        ctx.font = getTypoFontCSS(fontSize);
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+
+        const glyphs = [];
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+        const totalH = (lines.length - 1) * lineHeight;
+        const startY = -totalH / 2;
+
+        lines.forEach((line, lineIdx) => {
+          const chars = Array.from(line);
+          if (chars.length === 0) return;
+
+          const widths = chars.map(ch => ctx.measureText(ch).width);
+          const totalW = widths.reduce((a, b) => a + b, 0) + Math.max(0, chars.length - 1) * tracking;
+          const baseY = startY + lineIdx * lineHeight;
+
+          let cursorX = -totalW / 2;
+
+          chars.forEach((ch, idx) => {
+            const cw = widths[idx];
+            const cx = cursorX + cw / 2;
+            const normX = totalW > 0 ? cx / (totalW / 2) : 0; // -1 .. 1
+
+            let gx = cx;
+            let gy = baseY;
+            let rot = 0;
+
+            const amt = t.warpAmount / 100;
+
+            if (t.warpMode === 'archUp' || t.warpMode === 'archDown') {
+              const dir = t.warpMode === 'archUp' ? 1 : -1;
+              const maxAngle = (Math.PI * 0.65) * amt;
+              const radius = Math.max(fontSize * 1.4, (totalW / Math.max(0.08, maxAngle * 2)));
+              const theta = normX * maxAngle;
+              gx = Math.sin(theta) * radius;
+              gy = baseY + dir * (radius - Math.cos(theta) * radius) - dir * (radius * (1 - Math.cos(maxAngle)) * 0.5);
+              rot = dir * theta;
+            } else if (t.warpMode === 'wave') {
+              const amp = fontSize * 0.55 * amt;
+              const phase = normX * Math.PI * t.waveFreq;
+              gy = baseY + Math.sin(phase) * amp;
+              const slope = Math.cos(phase) * amp * (Math.PI * t.waveFreq / Math.max(1, totalW / 2));
+              rot = Math.atan(slope) * 0.65;
+            }
+
+            glyphs.push({ ch, x: gx, y: gy, rot, w: cw });
+
+            const pad = fontSize * 0.68;
+            minX = Math.min(minX, gx - cw / 2 - pad * 0.35);
+            maxX = Math.max(maxX, gx + cw / 2 + pad * 0.35);
+            minY = Math.min(minY, gy - pad);
+            maxY = Math.max(maxY, gy + pad);
+
+            cursorX += cw + tracking;
+          });
+        });
+
+        if (!isFinite(minX)) {
+          minX = -100; maxX = 100; minY = -50; maxY = 50;
+        }
+
+        // Expand bounds for strokes, shadow, and neon glow
+        const extraStroke = (t.stroke2On ? t.stroke2Width : (t.stroke1On ? t.stroke1Width : 0)) * scale;
+        const extraGlow = t.neonOn ? t.neonIntensity * 1.8 * scale : 0;
+        const extraShadow = t.shadowOn ? (t.shadowBlur + Math.max(Math.abs(t.shadowX), Math.abs(t.shadowY))) * scale : 0;
+        const margin = Math.max(24 * scale, extraStroke + Math.max(extraGlow, extraShadow) + 18 * scale);
+
+        return {
+          glyphs,
+          fontSize,
+          bounds: {
+            minX: minX - margin,
+            maxX: maxX + margin,
+            minY: minY - margin,
+            maxY: maxY + margin,
+            width: (maxX - minX) + margin * 2,
+            height: (maxY - minY) + margin * 2
+          }
+        };
+      }
+
+      function createFillStyle(ctx, bounds) {
+        const t = state.typo;
+        if (t.fillMode === 'solid') return t.solidColor;
+
+        const rad = ((t.gradAngle - 90) * Math.PI) / 180;
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+        const halfLen = Math.hypot(bounds.width, bounds.height) * 0.35;
+        const x1 = cx - Math.cos(rad) * halfLen;
+        const y1 = cy - Math.sin(rad) * halfLen;
+        const x2 = cx + Math.cos(rad) * halfLen;
+        const y2 = cy + Math.sin(rad) * halfLen;
+
+        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        grad.addColorStop(0, t.grad1);
+        grad.addColorStop(1, t.grad2);
+        return grad;
+      }
+
+      /**
+       * Renders the multi-layered logo onto a given canvas context centered at (centerX, centerY).
+       * Layer Order: Drop Shadow / Neon -> Outer Outline 2 -> Inner Outline 1 -> Fill
+       */
+      function drawLogoOntoContext(ctx, centerX, centerY, scale = 1) {
+        const t = state.typo;
+        const { glyphs, fontSize, bounds } = computeGlyphLayout(ctx, scale);
+
+        const offsetX = centerX - (bounds.minX + bounds.maxX) / 2;
+        const offsetY = centerY - (bounds.minY + bounds.maxY) / 2;
+
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.font = getTypoFontCSS(fontSize);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        const drawAllGlyphs = (mode) => {
+          glyphs.forEach(g => {
+            ctx.save();
+            ctx.translate(g.x, g.y);
+            if (g.rot !== 0) ctx.rotate(g.rot);
+            if (mode === 'stroke') ctx.strokeText(g.ch, 0, 0);
+            else ctx.fillText(g.ch, 0, 0);
+            ctx.restore();
+          });
+        };
+
+        // Pass 1: Neon Glow (outer aura behind outlines)
+        if (t.neonOn) {
+          ctx.save();
+          const glowColor = t.neonColor;
+          ctx.shadowColor = glowColor;
+          ctx.fillStyle = glowColor;
+          ctx.strokeStyle = glowColor;
+          const baseBlur = t.neonIntensity * scale;
+          // Double pass for rich authentic neon falloff
+          ctx.shadowBlur = baseBlur * 1.4;
+          if (t.stroke2On) {
+            ctx.lineWidth = t.stroke2Width * scale;
+            drawAllGlyphs('stroke');
+          } else {
+            drawAllGlyphs('fill');
+          }
+          ctx.shadowBlur = baseBlur * 0.65;
+          drawAllGlyphs('fill');
+          ctx.restore();
+        }
+
+        // Helper to apply drop shadow only on the backmost solid layer
+        const applyShadow = () => {
+          if (!t.shadowOn) return;
+          ctx.shadowColor = hexToRgba(t.shadowColor, t.shadowAlpha / 100);
+          ctx.shadowBlur = t.shadowBlur * scale;
+          ctx.shadowOffsetX = t.shadowX * scale;
+          ctx.shadowOffsetY = t.shadowY * scale;
+        };
+
+        let shadowApplied = false;
+
+        // Pass 2: Outer Stroke (Outline 2)
+        if (t.stroke2On) {
+          ctx.save();
+          if (!shadowApplied) { applyShadow(); shadowApplied = true; }
+          ctx.strokeStyle = t.stroke2Color;
+          ctx.lineWidth = Math.max(1, t.stroke2Width * scale);
+          drawAllGlyphs('stroke');
+          ctx.restore();
+        }
+
+        // Pass 3: Inner Stroke (Outline 1)
+        if (t.stroke1On) {
+          ctx.save();
+          if (!shadowApplied) { applyShadow(); shadowApplied = true; }
+          ctx.strokeStyle = t.stroke1Color;
+          ctx.lineWidth = Math.max(1, t.stroke1Width * scale);
+          drawAllGlyphs('stroke');
+          ctx.restore();
+        }
+
+        // Pass 4: Foreground Fill (Solid or Linear Gradient)
+        ctx.save();
+        if (!shadowApplied) { applyShadow(); shadowApplied = true; }
+        ctx.fillStyle = createFillStyle(ctx, bounds);
+        drawAllGlyphs('fill');
+        ctx.restore();
+
+        // Subtle inner neon highlight when neon is enabled
+        if (t.neonOn) {
+          ctx.save();
+          ctx.strokeStyle = hexToRgba('#FFFFFF', 0.35);
+          ctx.lineWidth = Math.max(1, 1.5 * scale);
+          drawAllGlyphs('stroke');
+          ctx.restore();
+        }
+
+        ctx.restore();
+        return bounds;
+      }
+
+      function renderTypoPreview() {
+        const wrap = document.getElementById('typo-preview-wrap');
+        const canvas = document.getElementById('typo-preview-canvas');
+        if (!wrap || !canvas || wrap.clientWidth === 0) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = wrap.clientWidth - 24;
+        const h = wrap.clientHeight - 24;
+
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        // Background rendering based on previewBg mode
+        const bgMode = state.typo.previewBg;
+        wrap.classList.toggle('checker-bg', bgMode === 'transparent');
+
+        if (bgMode === 'pattern') {
+          fillCanvasWithPattern(ctx, w, h, 1);
+        } else if (bgMode === 'light') {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, w, h);
+        } else if (bgMode === 'dark') {
+          ctx.fillStyle = '#0D0D10';
+          ctx.fillRect(0, 0, w, h);
+        } else {
+          ctx.clearRect(0, 0, w, h);
+        }
+
+        // Auto-fit scale so large text never clips in preview
+        const measure = computeGlyphLayout(ctx, 1);
+        const fitScale = Math.min(1, (w * 0.92) / Math.max(1, measure.bounds.width), (h * 0.9) / Math.max(1, measure.bounds.height));
+        drawLogoOntoContext(ctx, w / 2, h / 2, fitScale);
+
+        const preset = state.typo.exportPreset;
+        const presetLabels = {
+          fit: `AUTO FIT (${Math.round(measure.bounds.width * 2)} x ${Math.round(measure.bounds.height * 2)} px)`,
+          banner: 'BANNER 1200 x 630',
+          square: 'SQUARE 1024 x 1024',
+          desktop: 'PC WALLPAPER 1920 x 1080',
+          mobile: 'MOBILE WALLPAPER 1170 x 2532'
+        };
+        document.getElementById('typo-dim-badge').textContent = presetLabels[preset] || 'AUTO FIT';
+      }
+
+      function getExportDimensions(preset, fitBounds) {
+        switch (preset) {
+          case 'banner': return { w: 1200, h: 630 };
+          case 'square': return { w: 1024, h: 1024 };
+          case 'desktop': return { w: 1920, h: 1080 };
+          case 'mobile': return { w: 1170, h: 2532 };
+          case 'fit':
+          default:
+            return {
+              w: Math.max(200, Math.ceil(fitBounds.width * 2)),
+              h: Math.max(140, Math.ceil(fitBounds.height * 2))
+            };
+        }
+      }
+
+      function exportLogoPNG(withPatternBg) {
+        const tmp = document.createElement('canvas');
+        const tmpCtx = tmp.getContext('2d');
+        const layout = computeGlyphLayout(tmpCtx, 1);
+        const { w, h } = getExportDimensions(state.typo.exportPreset, layout.bounds);
+
+        const out = document.createElement('canvas');
+        out.width = w;
+        out.height = h;
+        const ctx = out.getContext('2d');
+
+        if (withPatternBg) {
+          fillCanvasWithPattern(ctx, w, h, Math.max(1, Math.min(2, w / 900)));
+        } else {
+          ctx.clearRect(0, 0, w, h);
+        }
+
+        // Compute optimal logo scale for the chosen output size
+        const targetScale = state.typo.exportPreset === 'fit'
+          ? 2
+          : Math.min((w * 0.84) / Math.max(1, layout.bounds.width), (h * 0.72) / Math.max(1, layout.bounds.height));
+
+        drawLogoOntoContext(ctx, w / 2, h / 2, targetScale);
+        const suffix = withPatternBg ? 'composite' : 'logo-alpha';
+        downloadCanvasPNG(out, `design-${suffix}-${w}x${h}.png`);
+      }
+
+      function escapeXml(str) {
+        return str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+      }
+
+      function exportLogoSVG() {
+        const t = state.typo;
+        const tmp = document.createElement('canvas');
+        const tmpCtx = tmp.getContext('2d');
+        const { glyphs, fontSize, bounds } = computeGlyphLayout(tmpCtx, 1);
+
+        const w = Math.ceil(bounds.width);
+        const h = Math.ceil(bounds.height);
+        const ox = -bounds.minX;
+        const oy = -bounds.minY;
+
+        const fontStyle = (t.italic || t.fontKey === 'italicSerif') ? 'italic' : 'normal';
+        const fontFamily = FONT_STACKS[t.fontKey] || FONT_STACKS.sans;
+
+        // Build SVG Gradient
+        const rad = ((t.gradAngle - 90) * Math.PI) / 180;
+        const x1 = 50 - Math.cos(rad) * 50;
+        const y1 = 50 - Math.sin(rad) * 50;
+        const x2 = 50 + Math.cos(rad) * 50;
+        const y2 = 50 + Math.sin(rad) * 50;
+
+        let defs = '';
+        if (t.fillMode === 'gradient') {
+          defs += `<linearGradient id="logoGrad" x1="${x1.toFixed(1)}%" y1="${y1.toFixed(1)}%" x2="${x2.toFixed(1)}%" y2="${y2.toFixed(1)}%">
+            <stop offset="0%" stop-color="${t.grad1}"/>
+            <stop offset="100%" stop-color="${t.grad2}"/>
+          </linearGradient>`;
+        }
+
+        if (t.shadowOn) {
+          defs += `<filter id="dropShadow" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="${t.shadowX}" dy="${t.shadowY}" stdDeviation="${(t.shadowBlur / 2).toFixed(2)}" flood-color="${t.shadowColor}" flood-opacity="${(t.shadowAlpha / 100).toFixed(2)}"/>
+          </filter>`;
+        }
+
+        if (t.neonOn) {
+          defs += `<filter id="neonGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="${(t.neonIntensity * 0.55).toFixed(2)}" result="blur1"/>
+            <feGaussianBlur stdDeviation="${(t.neonIntensity * 0.22).toFixed(2)}" result="blur2"/>
+            <feMerge>
+              <feMergeNode in="blur1"/>
+              <feMergeNode in="blur2"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>`;
+        }
+
+        const renderGlyphGroup = (attrs) => {
+          const items = glyphs.map(g => {
+            const tx = (g.x + ox).toFixed(2);
+            const ty = (g.y + oy).toFixed(2);
+            const deg = ((g.rot * 180) / Math.PI).toFixed(2);
+            const transform = g.rot !== 0 ? ` transform="rotate(${deg} ${tx} ${ty})"` : '';
+            return `<text x="${tx}" y="${ty}"${transform} text-anchor="middle" dominant-baseline="central">${escapeXml(g.ch)}</text>`;
+          }).join('');
+          return `<g ${attrs}>${items}</g>`;
+        };
+
+        const baseFontAttr = `font-family='${fontFamily.replace(/'/g, '"')}' font-size="${fontSize}" font-weight="${t.weight}" font-style="${fontStyle}" stroke-linejoin="round" stroke-linecap="round"`;
+        let layers = '';
+        let shadowUsed = false;
+
+        if (t.neonOn) {
+          const neonStroke = t.stroke2On ? `stroke="${t.neonColor}" stroke-width="${t.stroke2Width}"` : '';
+          layers += renderGlyphGroup(`${baseFontAttr} fill="${t.neonColor}" ${neonStroke} filter="url(#neonGlow)" opacity="0.88"`);
+        }
+
+        if (t.stroke2On) {
+          const f = (t.shadowOn && !shadowUsed) ? ' filter="url(#dropShadow)"' : '';
+          shadowUsed = true;
+          layers += renderGlyphGroup(`${baseFontAttr} fill="none" stroke="${t.stroke2Color}" stroke-width="${t.stroke2Width}"${f}`);
+        }
+
+        if (t.stroke1On) {
+          const f = (t.shadowOn && !shadowUsed) ? ' filter="url(#dropShadow)"' : '';
+          shadowUsed = true;
+          layers += renderGlyphGroup(`${baseFontAttr} fill="none" stroke="${t.stroke1Color}" stroke-width="${t.stroke1Width}"${f}`);
+        }
+
+        const fillVal = t.fillMode === 'gradient' ? 'url(#logoGrad)' : t.solidColor;
+        const fFill = (t.shadowOn && !shadowUsed) ? ' filter="url(#dropShadow)"' : '';
+        layers += renderGlyphGroup(`${baseFontAttr} fill="${fillVal}"${fFill}`);
+
+        const svgStr = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+  <defs>${defs}</defs>
+  ${layers}
+</svg>`;
+
+        const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+        downloadBlob(blob, `design-logo-${w}x${h}.svg`);
+        showToast('ベクターSVGを書き出しました');
+      }
+
+      function pullPaletteToTypo() {
+        const cols = [...state.palette.colors];
+        if (cols.length < 2) return;
+        const sorted = [...cols].sort((a, b) => relativeLuminance(b) - relativeLuminance(a));
+        const lightest = sorted[0];
+        const darkest = sorted[sorted.length - 1];
+        const mid1 = sorted[Math.min(2, sorted.length - 1)];
+        const mid2 = sorted[Math.max(1, sorted.length - 2)];
+
+        state.typo.solidColor = mid1;
+        state.typo.grad1 = mid1;
+        state.typo.grad2 = mid2;
+        state.typo.stroke1Color = lightest;
+        state.typo.stroke2Color = darkest;
+        state.typo.neonColor = mid1;
+
+        document.getElementById('typo-fill-solid').value = state.typo.solidColor;
+        document.getElementById('hex-typo-solid').textContent = state.typo.solidColor;
+        document.getElementById('typo-grad-1').value = state.typo.grad1;
+        document.getElementById('typo-grad-2').value = state.typo.grad2;
+        document.getElementById('typo-s1-color').value = state.typo.stroke1Color;
+        document.getElementById('typo-s2-color').value = state.typo.stroke2Color;
+        document.getElementById('typo-neon-color').value = state.typo.neonColor;
+
+        renderTypoPreview();
+        showToast('パレットの色をロゴへ反映しました');
+      }
+
+      /* --------------------------------------------------------------------
+         7. EVENT BINDINGS & INITIALIZATION
+         -------------------------------------------------------------------- */
+      function bindEvents() {
+        // Theme toggles
+        document.getElementById('theme-toggle-desktop').addEventListener('click', toggleTheme);
+        document.getElementById('theme-toggle-mobile').addEventListener('click', toggleTheme);
+
+        // Tab switching
+        document.querySelectorAll('nav.ios-segment button[data-tab]').forEach(btn => {
+          btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        // All iOS sliders track fill sync
+        document.querySelectorAll('input[type="range"].ios-slider').forEach(slider => {
+          slider.addEventListener('input', () => updateSliderTrack(slider));
+        });
+
+        /* --- Palette Events --- */
+        const dropzone = document.getElementById('palette-dropzone');
+        const fileInput = document.getElementById('palette-file-input');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        document.getElementById('btn-pick-image').addEventListener('click', () => fileInput.click());
+        document.getElementById('btn-demo-image').addEventListener('click', generateDemoImageAndExtract);
+
+        fileInput.addEventListener('change', (e) => {
+          if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+          fileInput.value = '';
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+          if (e.dataTransfer.files && e.dataTransfer.files[0]) handleImageFile(e.dataTransfer.files[0]);
+        });
+
+        document.querySelectorAll('#extract-count-seg button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#extract-count-seg button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.palette.extractCount = parseInt(btn.dataset.count, 10);
+            if (state.palette.sourceImage) {
+              applyExtractedFromSource();
+              showToast(`${state.palette.extractCount}色で再抽出しました`);
+            } else {
+              generateRandomHarmoniousPalette();
+            }
+          });
+        });
+
+        document.getElementById('btn-random-palette').addEventListener('click', generateRandomHarmoniousPalette);
+        document.getElementById('btn-export-palette').addEventListener('click', exportPaletteCardPNG);
+        document.getElementById('btn-sync-to-pattern').addEventListener('click', () => {
+          pullPaletteToPattern(false);
+          switchTab('pattern');
+          showToast('パレットをパターン工房へ反映しました');
+        });
+
+        document.getElementById('contrast-bg-picker').addEventListener('input', (e) => {
+          state.palette.bgHex = e.target.value.toUpperCase();
+          renderContrastSimulator();
+        });
+        document.getElementById('contrast-fg-picker').addEventListener('input', (e) => {
+          state.palette.fgHex = e.target.value.toUpperCase();
+          renderContrastSimulator();
+        });
+        document.getElementById('btn-swap-contrast').addEventListener('click', () => {
+          [state.palette.bgHex, state.palette.fgHex] = [state.palette.fgHex, state.palette.bgHex];
+          renderContrastSimulator();
+        });
+
+        document.getElementById('btn-copy-css-vars').addEventListener('click', () => {
+          const css = `:root {\n${state.palette.colors.map((c, i) => `  --palette-${i + 1}: ${c};`).join('\n')}\n}`;
+          copyToClipboard(css, 'CSS変数をコピーしました');
+        });
+        document.getElementById('btn-copy-hex-list').addEventListener('click', () => {
+          copyToClipboard(state.palette.colors.join(', '), 'HEXコード一覧をコピーしました');
+        });
+
+        /* --- Pattern Events --- */
+        document.querySelectorAll('#pattern-type-grid button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#pattern-type-grid button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.pattern.type = btn.dataset.patType;
+            renderPatternPreview();
+          });
+        });
+
+        document.getElementById('pat-size').addEventListener('input', (e) => {
+          state.pattern.tileSize = parseInt(e.target.value, 10);
+          document.getElementById('val-pat-size').textContent = `${state.pattern.tileSize} px`;
+          renderPatternPreview();
+        });
+
+        document.getElementById('pat-stroke').addEventListener('input', (e) => {
+          state.pattern.strokePct = parseInt(e.target.value, 10);
+          document.getElementById('val-pat-stroke').textContent = `${state.pattern.strokePct}%`;
+          renderPatternPreview();
+        });
+
+        const patAngleSlider = document.getElementById('pat-angle');
+        patAngleSlider.addEventListener('input', (e) => {
+          state.pattern.angle = parseInt(e.target.value, 10);
+          document.getElementById('val-pat-angle').textContent = `${state.pattern.angle}°`;
+          renderPatternPreview();
+        });
+
+        document.querySelectorAll('[data-angle-snap]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const ang = parseInt(btn.dataset.angleSnap, 10);
+            state.pattern.angle = ang;
+            patAngleSlider.value = ang;
+            updateSliderTrack(patAngleSlider);
+            document.getElementById('val-pat-angle').textContent = `${ang}°`;
+            renderPatternPreview();
+          });
+        });
+
+        document.getElementById('pat-grain').addEventListener('input', (e) => {
+          state.pattern.grain = parseInt(e.target.value, 10);
+          document.getElementById('val-pat-grain').textContent = `${state.pattern.grain}%`;
+          renderPatternPreview();
+        });
+
+        document.getElementById('pat-transparent').addEventListener('change', (e) => {
+          state.pattern.transparentBg = e.target.checked;
+          renderPatternPreview();
+        });
+
+        document.getElementById('pat-color-bg').addEventListener('input', (e) => {
+          state.pattern.bgColor = e.target.value.toUpperCase();
+          document.getElementById('hex-pat-bg').textContent = state.pattern.bgColor;
+          renderPatternPreview();
+        });
+        document.getElementById('pat-color-1').addEventListener('input', (e) => {
+          state.pattern.color1 = e.target.value.toUpperCase();
+          document.getElementById('hex-pat-c1').textContent = state.pattern.color1;
+          renderPatternPreview();
+        });
+        document.getElementById('pat-color-2').addEventListener('input', (e) => {
+          state.pattern.color2 = e.target.value.toUpperCase();
+          document.getElementById('hex-pat-c2').textContent = state.pattern.color2;
+          renderPatternPreview();
+        });
+
+        document.getElementById('btn-pat-pull-palette').addEventListener('click', () => {
+          pullPaletteToPattern(false);
+          showToast('パレット配色をパターンへ連動しました');
+        });
+        document.getElementById('btn-pat-shuffle-colors').addEventListener('click', () => {
+          pullPaletteToPattern(true);
+          showToast('パレット内で配色をシャッフルしました');
+        });
+
+        document.getElementById('btn-pat-tile-bounds').addEventListener('click', (e) => {
+          state.pattern.showTileBounds = !state.pattern.showTileBounds;
+          e.currentTarget.classList.toggle('active', state.pattern.showTileBounds);
+          renderPatternPreview();
+        });
+
+        document.getElementById('btn-pat-send-typo').addEventListener('click', () => {
+          state.typo.previewBg = 'pattern';
+          document.querySelectorAll('#typo-bg-mode-seg button').forEach(b => {
+            b.classList.toggle('active', b.dataset.bg === 'pattern');
+          });
+          switchTab('typo');
+          showToast('シームレスパターンをロゴ背景へセットしました');
+        });
+
+        document.getElementById('btn-export-pattern').addEventListener('click', exportPatternPNG);
+
+        /* --- Typo & Logo Events --- */
+        document.getElementById('typo-text').addEventListener('input', (e) => {
+          state.typo.text = e.target.value;
+          renderTypoPreview();
+        });
+        document.getElementById('typo-font').addEventListener('change', (e) => {
+          state.typo.fontKey = e.target.value;
+          renderTypoPreview();
+        });
+
+        document.querySelectorAll('#typo-weight-seg button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#typo-weight-seg button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.typo.weight = btn.dataset.weight;
+            renderTypoPreview();
+          });
+        });
+
+        document.getElementById('btn-typo-italic').addEventListener('click', (e) => {
+          state.typo.italic = !state.typo.italic;
+          e.currentTarget.classList.toggle('active', state.typo.italic);
+          renderTypoPreview();
+        });
+
+        document.getElementById('typo-size').addEventListener('input', (e) => {
+          state.typo.size = parseInt(e.target.value, 10);
+          document.getElementById('val-typo-size').textContent = `${state.typo.size} px`;
+          renderTypoPreview();
+        });
+        document.getElementById('typo-tracking').addEventListener('input', (e) => {
+          state.typo.tracking = parseInt(e.target.value, 10);
+          document.getElementById('val-typo-tracking').textContent = `${state.typo.tracking} px`;
+          renderTypoPreview();
+        });
+
+        document.querySelectorAll('#typo-fill-seg button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#typo-fill-seg button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.typo.fillMode = btn.dataset.fill;
+            document.getElementById('typo-solid-row').classList.toggle('hidden', state.typo.fillMode !== 'solid');
+            document.getElementById('typo-grad-rows').classList.toggle('hidden', state.typo.fillMode !== 'gradient');
+            renderTypoPreview();
+          });
+        });
+
+        document.getElementById('typo-fill-solid').addEventListener('input', (e) => {
+          state.typo.solidColor = e.target.value.toUpperCase();
+          document.getElementById('hex-typo-solid').textContent = state.typo.solidColor;
+          renderTypoPreview();
+        });
+        document.getElementById('typo-grad-1').addEventListener('input', (e) => {
+          state.typo.grad1 = e.target.value.toUpperCase();
+          renderTypoPreview();
+        });
+        document.getElementById('typo-grad-2').addEventListener('input', (e) => {
+          state.typo.grad2 = e.target.value.toUpperCase();
+          renderTypoPreview();
+        });
+        document.getElementById('typo-grad-angle').addEventListener('input', (e) => {
+          state.typo.gradAngle = parseInt(e.target.value, 10);
+          document.getElementById('val-typo-grad-angle').textContent = `${state.typo.gradAngle}°`;
+          renderTypoPreview();
+        });
+
+        // Outlines
+        document.getElementById('typo-s1-on').addEventListener('change', (e) => {
+          state.typo.stroke1On = e.target.checked;
+          document.getElementById('typo-s1-controls').classList.toggle('hidden', !e.target.checked);
+          renderTypoPreview();
+        });
+        document.getElementById('typo-s1-color').addEventListener('input', (e) => {
+          state.typo.stroke1Color = e.target.value.toUpperCase();
+          renderTypoPreview();
+        });
+        document.getElementById('typo-s1-w').addEventListener('input', (e) => {
+          state.typo.stroke1Width = parseInt(e.target.value, 10);
+          document.getElementById('val-typo-s1-w').textContent = `${state.typo.stroke1Width} px`;
+          renderTypoPreview();
+        });
+
+        document.getElementById('typo-s2-on').addEventListener('change', (e) => {
+          state.typo.stroke2On = e.target.checked;
+          document.getElementById('typo-s2-controls').classList.toggle('hidden', !e.target.checked);
+          renderTypoPreview();
+        });
+        document.getElementById('typo-s2-color').addEventListener('input', (e) => {
+          state.typo.stroke2Color = e.target.value.toUpperCase();
+          renderTypoPreview();
+        });
+        document.getElementById('typo-s2-w').addEventListener('input', (e) => {
+          state.typo.stroke2Width = parseInt(e.target.value, 10);
+          document.getElementById('val-typo-s2-w').textContent = `${state.typo.stroke2Width} px`;
+          renderTypoPreview();
+        });
+
+        // Shadow & Neon
+        document.getElementById('typo-shadow-on').addEventListener('change', (e) => {
+          state.typo.shadowOn = e.target.checked;
+          document.getElementById('typo-shadow-controls').classList.toggle('hidden', !e.target.checked);
+          renderTypoPreview();
+        });
+        document.getElementById('typo-shadow-color').addEventListener('input', (e) => {
+          state.typo.shadowColor = e.target.value.toUpperCase();
+          renderTypoPreview();
+        });
+        document.getElementById('typo-sh-blur').addEventListener('input', (e) => {
+          state.typo.shadowBlur = parseInt(e.target.value, 10);
+          document.getElementById('val-sh-blur').textContent = state.typo.shadowBlur;
+          renderTypoPreview();
+        });
+        document.getElementById('typo-sh-alpha').addEventListener('input', (e) => {
+          state.typo.shadowAlpha = parseInt(e.target.value, 10);
+          document.getElementById('val-sh-alpha').textContent = `${state.typo.shadowAlpha}%`;
+          renderTypoPreview();
+        });
+        document.getElementById('typo-sh-x').addEventListener('input', (e) => {
+          state.typo.shadowX = parseInt(e.target.value, 10);
+          document.getElementById('val-sh-x').textContent = state.typo.shadowX;
+          renderTypoPreview();
+        });
+        document.getElementById('typo-sh-y').addEventListener('input', (e) => {
+          state.typo.shadowY = parseInt(e.target.value, 10);
+          document.getElementById('val-sh-y').textContent = state.typo.shadowY;
+          renderTypoPreview();
+        });
+
+        document.getElementById('typo-neon-on').addEventListener('change', (e) => {
+          state.typo.neonOn = e.target.checked;
+          document.getElementById('typo-neon-controls').classList.toggle('hidden', !e.target.checked);
+          renderTypoPreview();
+        });
+        document.getElementById('typo-neon-color').addEventListener('input', (e) => {
+          state.typo.neonColor = e.target.value.toUpperCase();
+          renderTypoPreview();
+        });
+        document.getElementById('typo-neon-int').addEventListener('input', (e) => {
+          state.typo.neonIntensity = parseInt(e.target.value, 10);
+          document.getElementById('val-neon-int').textContent = `${state.typo.neonIntensity} px`;
+          renderTypoPreview();
+        });
+
+        // Warp
+        document.querySelectorAll('#typo-warp-seg button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#typo-warp-seg button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.typo.warpMode = btn.dataset.warp;
+            document.getElementById('typo-warp-controls').classList.toggle('hidden', state.typo.warpMode === 'none');
+            document.getElementById('typo-wave-freq-wrap').classList.toggle('hidden', state.typo.warpMode !== 'wave');
+            renderTypoPreview();
+          });
+        });
+
+        document.getElementById('typo-warp-amt').addEventListener('input', (e) => {
+          state.typo.warpAmount = parseInt(e.target.value, 10);
+          document.getElementById('val-warp-amt').textContent = `${state.typo.warpAmount}%`;
+          renderTypoPreview();
+        });
+        document.getElementById('typo-warp-freq').addEventListener('input', (e) => {
+          state.typo.waveFreq = parseFloat(e.target.value);
+          document.getElementById('val-warp-freq').textContent = state.typo.waveFreq.toFixed(1);
+          renderTypoPreview();
+        });
+
+        // Typo Preview BG & Exports
+        document.querySelectorAll('#typo-bg-mode-seg button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#typo-bg-mode-seg button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.typo.previewBg = btn.dataset.bg;
+            renderTypoPreview();
+          });
+        });
+
+        document.getElementById('typo-export-preset').addEventListener('change', (e) => {
+          state.typo.exportPreset = e.target.value;
+          renderTypoPreview();
+        });
+
+        document.getElementById('btn-typo-pull-palette').addEventListener('click', pullPaletteToTypo);
+        document.getElementById('btn-export-logo-png').addEventListener('click', () => exportLogoPNG(false));
+        document.getElementById('btn-export-logo-svg').addEventListener('click', exportLogoSVG);
+        document.getElementById('btn-export-composite-png').addEventListener('click', () => exportLogoPNG(true));
+
+        // Responsive Canvas Resize Observer
+        let resizeRaf = null;
+        window.addEventListener('resize', () => {
+          cancelAnimationFrame(resizeRaf);
+          resizeRaf = requestAnimationFrame(() => {
+            if (state.activeTab === 'pattern') renderPatternPreview();
+            if (state.activeTab === 'typo') renderTypoPreview();
+          });
+        });
+      }
+
+      /* --------------------------------------------------------------------
+         8. BOOTSTRAP
+         -------------------------------------------------------------------- */
+      function init() {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(prefersDark ? 'dark' : 'light');
+        renderPresetList();
+        renderPaletteStudio();
+        syncPatternColorInputs();
+        bindEvents();
+        initAllSliderTracks();
+      }
+
+      window.addEventListener('DOMContentLoaded', init);
+    })();
+  </script>
+</body>
+</html>

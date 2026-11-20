@@ -1,0 +1,2412 @@
+<!DOCTYPE html>
+<html lang="ja" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SFX & FOLEY LAB — Single-Shot Sound Synthesizer</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Inter"', '"Hiragino Sans"', '"Noto Sans JP"', 'sans-serif'],
+            mono: ['"SF Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* =========================================================================
+       iOS / iPadOS System Design Tokens & Native Control Styling
+       ========================================================================= */
+    :root {
+      --ios-bg: #F2F2F7;
+      --ios-surface: rgba(255, 255, 255, 0.82);
+      --ios-surface-solid: #FFFFFF;
+      --ios-header: rgba(242, 242, 247, 0.78);
+      --ios-border: rgba(60, 60, 67, 0.10);
+      --ios-separator: rgba(60, 60, 67, 0.12);
+      --ios-text: #1C1C1E;
+      --ios-text-secondary: #6C6C70;
+      --ios-text-tertiary: #8E8E93;
+      --ios-accent: #007AFF;
+      --ios-accent-soft: rgba(0, 122, 255, 0.12);
+      --ios-green: #34C759;
+      --ios-red: #FF3B30;
+      --ios-orange: #FF9500;
+      --ios-seg-bg: rgba(118, 118, 128, 0.12);
+      --ios-seg-active: #FFFFFF;
+      --ios-seg-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), 0 0.5px 1px rgba(0, 0, 0, 0.04);
+      --ios-track: rgba(120, 120, 128, 0.20);
+      --ios-scope-bg: #F8F8FA;
+      --ios-scope-grid: rgba(60, 60, 67, 0.08);
+      --ios-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.03);
+    }
+
+    html.dark {
+      --ios-bg: #000000;
+      --ios-surface: rgba(28, 28, 30, 0.84);
+      --ios-surface-solid: #1C1C1E;
+      --ios-header: rgba(18, 18, 20, 0.78);
+      --ios-border: rgba(255, 255, 255, 0.09);
+      --ios-separator: rgba(255, 255, 255, 0.10);
+      --ios-text: #F2F2F7;
+      --ios-text-secondary: #AEAEB2;
+      --ios-text-tertiary: #8E8E93;
+      --ios-accent: #0A84FF;
+      --ios-accent-soft: rgba(10, 132, 255, 0.18);
+      --ios-green: #30D158;
+      --ios-red: #FF453A;
+      --ios-orange: #FF9F0A;
+      --ios-seg-bg: rgba(118, 118, 128, 0.26);
+      --ios-seg-active: #3A3A3C;
+      --ios-seg-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0.5px 1px rgba(0, 0, 0, 0.25);
+      --ios-track: rgba(120, 120, 128, 0.36);
+      --ios-scope-bg: #111113;
+      --ios-scope-grid: rgba(255, 255, 255, 0.07);
+      --ios-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--ios-bg);
+      color: var(--ios-text);
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      transition: background-color 0.25s ease, color 0.25s ease;
+      overflow-x: hidden;
+    }
+
+    /* Frosted Glass Surfaces */
+    .ios-glass-header {
+      background-color: var(--ios-header);
+      backdrop-filter: saturate(180%) blur(24px);
+      -webkit-backdrop-filter: saturate(180%) blur(24px);
+      border-bottom: 1px solid var(--ios-border);
+    }
+
+    .ios-card {
+      background-color: var(--ios-surface);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border: 1px solid var(--ios-border);
+      box-shadow: var(--ios-card-shadow);
+      border-radius: 20px;
+      transition: background-color 0.25s ease, border-color 0.25s ease;
+    }
+
+    .ios-divider {
+      border-color: var(--ios-separator);
+    }
+
+    /* iOS Segmented Control */
+    .ios-segmented {
+      background-color: var(--ios-seg-bg);
+      border-radius: 10px;
+      padding: 2.5px;
+      display: inline-flex;
+      position: relative;
+      user-select: none;
+    }
+
+    .ios-segmented button {
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ios-text-secondary);
+      transition: all 0.18s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .ios-segmented button.active {
+      background-color: var(--ios-seg-active);
+      color: var(--ios-text);
+      font-weight: 600;
+      box-shadow: var(--ios-seg-shadow);
+    }
+
+    /* iOS Precision Slider */
+    input[type="range"].ios-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 28px;
+      background: transparent;
+      cursor: pointer;
+      touch-action: pan-y;
+    }
+
+    input[type="range"].ios-slider:focus {
+      outline: none;
+    }
+
+    input[type="range"].ios-slider::-webkit-slider-runnable-track {
+      height: 5px;
+      border-radius: 999px;
+      background: linear-gradient(
+        to right,
+        var(--ios-accent) 0%,
+        var(--ios-accent) var(--fill, 50%),
+        var(--ios-track) var(--fill, 50%),
+        var(--ios-track) 100%
+      );
+    }
+
+    input[type="range"].ios-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18), 0 0.5px 1.5px rgba(0, 0, 0, 0.12);
+      margin-top: -8.5px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    input[type="range"].ios-slider:active::-webkit-slider-thumb {
+      transform: scale(1.12);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.24);
+    }
+
+    input[type="range"].ios-slider::-moz-range-track {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--ios-track);
+    }
+
+    input[type="range"].ios-slider::-moz-range-progress {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--ios-accent);
+    }
+
+    input[type="range"].ios-slider::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+
+    /* iOS Toggle Switch */
+    .ios-switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .ios-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .ios-switch-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--ios-track);
+      transition: background-color 0.22s ease;
+      border-radius: 999px;
+    }
+
+    .ios-switch-slider::before {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #FFFFFF;
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border-radius: 50%;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+    }
+
+    .ios-switch input:checked + .ios-switch-slider {
+      background-color: var(--ios-green);
+    }
+
+    .ios-switch input:checked + .ios-switch-slider::before {
+      transform: translateX(18px);
+    }
+
+    /* Trigger Pad Tactile Animation */
+    .trigger-pad {
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.09s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease, background-color 0.15s ease;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .trigger-pad:active,
+    .trigger-pad.is-triggered {
+      transform: scale(0.975);
+    }
+
+    @keyframes padRipple {
+      0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0.45; }
+      100% { transform: translate(-50%, -50%) scale(2.8); opacity: 0; }
+    }
+
+    .pad-ripple {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%);
+      pointer-events: none;
+      animation: padRipple 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Preset Chip Hover/Active */
+    .preset-chip {
+      background-color: var(--ios-seg-bg);
+      color: var(--ios-text);
+      border: 1px solid transparent;
+      transition: all 0.16s ease;
+      touch-action: manipulation;
+    }
+
+    .preset-chip:hover {
+      border-color: var(--ios-border);
+      background-color: var(--ios-surface-solid);
+    }
+
+    .preset-chip.active {
+      background-color: var(--ios-accent);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--ios-track);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-blue-500/20">
+
+  <!-- =========================================================================
+       Top Frosted Navigation Header
+       ========================================================================= -->
+  <header class="ios-glass-header sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- App Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm" style="background: linear-gradient(135deg, var(--ios-accent), #5856D6);">
+          <!-- Minimalist Line SVG Icon: Waveform -->
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12h3l2.5-7 4 14 3.5-10 2.5 3H22" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-semibold tracking-tight leading-tight">SFX &amp; FOLEY LAB</h1>
+          <p class="text-[11px] font-medium tracking-wide uppercase" style="color: var(--ios-text-tertiary);">Single-Shot Audio Engine</p>
+        </div>
+      </div>
+
+      <!-- Center Main View Switcher (iOS Segmented Control) -->
+      <nav class="ios-segmented order-3 sm:order-2 w-full sm:w-auto" role="tablist" aria-label="メイン表示切替">
+        <button id="tabSynthBtn" role="tab" aria-selected="true" class="active flex-1 sm:flex-none px-4 py-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="2" y1="14" x2="6" y2="14"></line><line x1="10" y1="8" x2="14" y2="8"></line>
+            <line x1="18" y1="16" x2="22" y2="16"></line>
+          </svg>
+          <span>Synthesizer</span>
+        </button>
+        <button id="tabGuideBtn" role="tab" aria-selected="false" class="flex-1 sm:flex-none px-4 py-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Reference / Guide</span>
+        </button>
+      </nav>
+
+      <!-- Right Controls: Theme Toggle -->
+      <div class="flex items-center gap-2 order-2 sm:order-3">
+        <button id="themeToggleBtn" type="button" aria-label="ライトモードとダークモードを切り替え" class="px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-medium border transition-colors" style="background-color: var(--ios-surface); border-color: var(--ios-border); color: var(--ios-text);">
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg id="iconSun" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2"></path><path d="M12 20v2"></path>
+            <path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12h2"></path><path d="M20 12h2"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg id="iconMoon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+          <span id="themeLabel" class="hidden sm:inline">Light</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       VIEW 1: SYNTHESIZER WORKSPACE
+       ========================================================================= -->
+  <main id="synthView" class="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-7">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+
+      <!-- =====================================================================
+           LEFT COLUMN: Monitor, Trigger Pad, Presets, Randomizer, WAV Export
+           ===================================================================== -->
+      <div class="lg:col-span-5 space-y-5 lg:sticky lg:top-20">
+
+        <!-- Card 1: Oscilloscope & Large Trigger Pad -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span id="engineStatusDot" class="w-2 h-2 rounded-full" style="background-color: var(--ios-green);"></span>
+              <span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">Oscilloscope</span>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] font-mono tabular-nums" style="color: var(--ios-text-tertiary);">
+              <span>LEN <strong id="estDurationReadout" style="color: var(--ios-text);">0.24s</strong></span>
+              <span>PEAK <strong id="peakDbReadout" style="color: var(--ios-text);">-inf dB</strong></span>
+            </div>
+          </div>
+
+          <!-- Real-Time Waveform Canvas -->
+          <div class="relative w-full h-32 sm:h-36 rounded-2xl overflow-hidden border" style="background-color: var(--ios-scope-bg); border-color: var(--ios-border);">
+            <canvas id="scopeCanvas" class="w-full h-full block"></canvas>
+            <div class="absolute bottom-2 left-3 right-3 flex items-center justify-between pointer-events-none">
+              <span id="activePatchLabel" class="text-[11px] font-medium px-2 py-0.5 rounded-md backdrop-blur-md" style="background-color: var(--ios-surface); color: var(--ios-text-secondary);">UI Soft Tap</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider" style="color: var(--ios-text-tertiary);">Real-Time PCM</span>
+            </div>
+          </div>
+
+          <!-- Large Rapid-Tap Trigger Pad -->
+          <button id="triggerPad" type="button" class="trigger-pad w-full py-5 sm:py-6 px-4 rounded-2xl text-white font-semibold flex flex-col items-center justify-center gap-1.5 shadow-lg" style="background: linear-gradient(180deg, var(--ios-accent) 0%, #0062CC 100%); box-shadow: 0 6px 20px rgba(0, 122, 255, 0.28);">
+            <div class="flex items-center gap-2.5 text-base sm:text-lg tracking-tight">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <polygon points="6 4 20 12 6 20 6 4"></polygon>
+              </svg>
+              <span>TRIGGER SOUND</span>
+            </div>
+            <span class="text-[11px] font-normal opacity-80 tracking-wide">Tap rapidly or press Spacebar to audition</span>
+          </button>
+
+          <!-- Quick Audition Options Row -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+              <span class="ios-switch">
+                <input id="optAutoAudition" type="checkbox" checked>
+                <span class="ios-switch-slider"></span>
+              </span>
+              <span class="text-xs font-medium" style="color: var(--ios-text-secondary);">Auto-Audition</span>
+            </label>
+
+            <label class="flex items-center gap-2.5 cursor-pointer select-none">
+              <span class="ios-switch">
+                <input id="optPitchVar" type="checkbox">
+                <span class="ios-switch-slider"></span>
+              </span>
+              <span class="text-xs font-medium" style="color: var(--ios-text-secondary);">Pitch Humanize</span>
+            </label>
+
+            <button id="rapidTestBtn" type="button" class="px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-colors" style="background-color: var(--ios-seg-bg); border-color: transparent; color: var(--ios-text);">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                <polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+              </svg>
+              <span>3x Burst</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Card 2: One-Tap Presets & Category Randomizer -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">Presets &amp; Randomizer</h2>
+            <button id="resetInitBtn" type="button" class="text-xs font-medium hover:underline" style="color: var(--ios-accent);">Init Patch</button>
+          </div>
+
+          <!-- Category Randomize Controls -->
+          <div class="p-3 rounded-2xl space-y-3" style="background-color: var(--ios-seg-bg);">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">Random Category</span>
+              <select id="randomCategorySelect" aria-label="ランダム生成カテゴリ" class="text-xs font-medium rounded-lg px-2.5 py-1 border focus:outline-none" style="background-color: var(--ios-surface-solid); border-color: var(--ios-border); color: var(--ios-text);">
+                <option value="all">All Categories</option>
+                <option value="ui">UI &amp; Clicks</option>
+                <option value="chime">Chime &amp; Notify</option>
+                <option value="retro">Retro 8-bit</option>
+                <option value="alert">Alert &amp; Alarm</option>
+                <option value="magic">Magic &amp; Foley</option>
+              </select>
+            </div>
+            <button id="randomizeBtn" type="button" class="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="background-color: var(--ios-surface-solid); color: var(--ios-text); box-shadow: var(--ios-seg-shadow);">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line>
+                <polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line>
+                <line x1="4" y1="4" x2="9" y2="9"></line>
+              </svg>
+              <span>RANDOMIZE SOUND</span>
+            </button>
+          </div>
+
+          <!-- 14 One-Tap Presets Grid -->
+          <div id="presetGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+            <!-- Populated dynamically by JS -->
+          </div>
+        </section>
+
+        <!-- Card 3: 16-bit PCM WAV Export -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">Export 16-bit PCM WAV</h2>
+            <span id="estWavSize" class="text-[11px] font-mono tabular-nums" style="color: var(--ios-text-tertiary);">~22 KB</span>
+          </div>
+
+          <!-- Channel Mode & Sample Rate -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="space-y-1.5">
+              <span class="block text-[11px] font-medium" style="color: var(--ios-text-secondary);">Channels</span>
+              <div class="ios-segmented w-full" id="exportChannelsSeg">
+                <button type="button" data-value="1" class="flex-1 py-1.5">Mono</button>
+                <button type="button" data-value="2" class="active flex-1 py-1.5">Stereo</button>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <span class="block text-[11px] font-medium" style="color: var(--ios-text-secondary);">Sample Rate</span>
+              <div class="ios-segmented w-full" id="exportRateSeg">
+                <button type="button" data-value="44100" class="active flex-1 py-1.5">44.1 kHz</button>
+                <button type="button" data-value="48000" class="flex-1 py-1.5">48 kHz</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filename Input -->
+          <div class="space-y-1.5">
+            <label for="exportFilename" class="block text-[11px] font-medium" style="color: var(--ios-text-secondary);">File Name</label>
+            <div class="flex items-center rounded-xl border px-3 py-2" style="background-color: var(--ios-scope-bg); border-color: var(--ios-border);">
+              <input id="exportFilename" type="text" value="sfx-ui-soft-tap" class="w-full bg-transparent text-sm font-mono focus:outline-none" style="color: var(--ios-text);" spellcheck="false">
+              <span class="text-xs font-mono pl-2" style="color: var(--ios-text-tertiary);">.wav</span>
+            </div>
+          </div>
+
+          <!-- Download WAV Button -->
+          <button id="exportWavBtn" type="button" class="w-full py-3 px-4 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" style="background-color: var(--ios-text); color: var(--ios-bg);">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download 16-bit WAV</span>
+          </button>
+        </section>
+
+      </div>
+
+      <!-- =====================================================================
+           RIGHT COLUMN: Detailed Sound Shaping Modules (iOS Grouped Inset)
+           ===================================================================== -->
+      <div class="lg:col-span-7 space-y-5">
+
+        <!-- Module 1: Oscillator & Pitch Envelope -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">01 / Oscillator &amp; Pitch</h2>
+            <span class="text-[11px] font-mono" style="color: var(--ios-text-tertiary);">Primary Voice</span>
+          </div>
+
+          <!-- Waveform Segmented Control -->
+          <div class="ios-segmented w-full grid grid-cols-4" id="waveformSeg" role="radiogroup" aria-label="オシレーター波形">
+            <button type="button" data-value="sine" class="active py-2">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3.5-5 5-2"/></svg>
+              <span class="hidden sm:inline">Sine</span>
+            </button>
+            <button type="button" data-value="triangle" class="py-2">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 7 5 17 19 22 12"/></svg>
+              <span class="hidden sm:inline">Triangle</span>
+            </button>
+            <button type="button" data-value="square" class="py-2">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 16 2 8 11 8 11 16 20 16 20 8 22 8"/></svg>
+              <span class="hidden sm:inline">Square</span>
+            </button>
+            <button type="button" data-value="sawtooth" class="py-2">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 16 12 6 12 16 22 6"/></svg>
+              <span class="hidden sm:inline">Saw</span>
+            </button>
+          </div>
+
+          <!-- Pitch Sliders -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 pt-1">
+            <!-- Base Pitch -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramFreq" class="text-xs font-medium">Base Pitch</label>
+                <span id="valFreq" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">880 Hz</span>
+              </div>
+              <input id="paramFreq" type="range" min="0" max="1000" value="550" class="ios-slider">
+            </div>
+
+            <!-- Pitch Sweep Amount -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramPitchEnv" class="text-xs font-medium">Pitch Sweep Amount</label>
+                <span id="valPitchEnv" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">-12 st</span>
+              </div>
+              <input id="paramPitchEnv" type="range" min="-36" max="36" step="0.5" value="-12" class="ios-slider">
+            </div>
+
+            <!-- Pitch Sweep Time -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramPitchTime" class="text-xs font-medium">Pitch Sweep Time</label>
+                <span id="valPitchTime" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">45 ms</span>
+              </div>
+              <input id="paramPitchTime" type="range" min="5" max="1000" step="1" value="45" class="ios-slider">
+            </div>
+
+            <!-- Pitch Modulation (LFO / Vibrato) -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramLfoDepth" class="text-xs font-medium">FM / Vibrato Depth</label>
+                <span id="valLfoDepth" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">0 Hz</span>
+              </div>
+              <input id="paramLfoDepth" type="range" min="0" max="400" step="1" value="0" class="ios-slider">
+            </div>
+
+            <!-- LFO Rate -->
+            <div class="sm:col-span-2">
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramLfoRate" class="text-xs font-medium">Modulation Rate</label>
+                <span id="valLfoRate" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">12 Hz</span>
+              </div>
+              <input id="paramLfoRate" type="range" min="1" max="60" step="0.5" value="12" class="ios-slider">
+            </div>
+          </div>
+
+          <!-- 2nd Tone / Harmonic Step Sub-Section -->
+          <div class="pt-3 border-t ios-divider space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-semibold">Secondary Tone / Chime Step</span>
+                <p class="text-[11px]" style="color: var(--ios-text-tertiary);">2音チャイム、コイン、ベル倍音の生成</p>
+              </div>
+              <label class="ios-switch">
+                <input id="paramTone2Enabled" type="checkbox">
+                <span class="ios-switch-slider"></span>
+              </label>
+            </div>
+
+            <div id="tone2Controls" class="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-3 opacity-45 pointer-events-none transition-opacity">
+              <div>
+                <div class="flex justify-between items-baseline mb-1">
+                  <label for="paramTone2Interval" class="text-xs font-medium">Interval</label>
+                  <span id="valTone2Interval" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">+7 st</span>
+                </div>
+                <input id="paramTone2Interval" type="range" min="-24" max="24" step="1" value="7" class="ios-slider">
+              </div>
+              <div>
+                <div class="flex justify-between items-baseline mb-1">
+                  <label for="paramTone2Delay" class="text-xs font-medium">Step Delay</label>
+                  <span id="valTone2Delay" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">80 ms</span>
+                </div>
+                <input id="paramTone2Delay" type="range" min="0" max="400" step="5" value="80" class="ios-slider">
+              </div>
+              <div>
+                <div class="flex justify-between items-baseline mb-1">
+                  <label for="paramTone2Mix" class="text-xs font-medium">Tone 2 Level</label>
+                  <span id="valTone2Mix" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">70%</span>
+                </div>
+                <input id="paramTone2Mix" type="range" min="0" max="100" step="1" value="70" class="ios-slider">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Module 2: Noise Generator -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">02 / Noise Layer</h2>
+            <div class="ios-segmented" id="noiseTypeSeg">
+              <button type="button" data-value="white" class="active px-3 py-1">White</button>
+              <button type="button" data-value="pink" class="px-3 py-1">Pink</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramNoiseMix" class="text-xs font-medium">Noise Mix</label>
+                <span id="valNoiseMix" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">15%</span>
+              </div>
+              <input id="paramNoiseMix" type="range" min="0" max="100" step="1" value="15" class="ios-slider">
+            </div>
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramNoiseDecay" class="text-xs font-medium">Noise Decay</label>
+                <span id="valNoiseDecay" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">35 ms</span>
+              </div>
+              <input id="paramNoiseDecay" type="range" min="5" max="1200" step="5" value="35" class="ios-slider">
+            </div>
+          </div>
+        </section>
+
+        <!-- Module 3: Amplitude Envelope (ADSR + Gate) -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">03 / Amplitude Envelope (ADSR)</h2>
+            <span class="text-[11px] font-mono" style="color: var(--ios-text-tertiary);">Dynamics</span>
+          </div>
+
+          <!-- Visual ADSR Curve Preview -->
+          <div class="w-full h-20 rounded-xl border overflow-hidden" style="background-color: var(--ios-scope-bg); border-color: var(--ios-border);">
+            <canvas id="adsrCanvas" class="w-full h-full block"></canvas>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-3">
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramAttack" class="text-xs font-medium">Attack</label>
+                <span id="valAttack" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">2 ms</span>
+              </div>
+              <input id="paramAttack" type="range" min="1" max="500" step="1" value="2" class="ios-slider">
+            </div>
+
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramDecay" class="text-xs font-medium">Decay</label>
+                <span id="valDecay" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">65 ms</span>
+              </div>
+              <input id="paramDecay" type="range" min="10" max="1500" step="5" value="65" class="ios-slider">
+            </div>
+
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramSustain" class="text-xs font-medium">Sustain Level</label>
+                <span id="valSustain" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">0%</span>
+              </div>
+              <input id="paramSustain" type="range" min="0" max="100" step="1" value="0" class="ios-slider">
+            </div>
+
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramHold" class="text-xs font-medium">Sustain Hold</label>
+                <span id="valHold" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">20 ms</span>
+              </div>
+              <input id="paramHold" type="range" min="0" max="1000" step="5" value="20" class="ios-slider">
+            </div>
+
+            <div class="sm:col-span-2">
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramRelease" class="text-xs font-medium">Release</label>
+                <span id="valRelease" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">45 ms</span>
+              </div>
+              <input id="paramRelease" type="range" min="10" max="1500" step="5" value="45" class="ios-slider">
+            </div>
+          </div>
+        </section>
+
+        <!-- Module 4: Filter -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">04 / Resonant Filter</h2>
+            <div class="ios-segmented" id="filterTypeSeg">
+              <button type="button" data-value="none" class="px-2.5 py-1">Bypass</button>
+              <button type="button" data-value="lowpass" class="active px-2.5 py-1">LPF</button>
+              <button type="button" data-value="highpass" class="px-2.5 py-1">HPF</button>
+              <button type="button" data-value="bandpass" class="px-2.5 py-1">BPF</button>
+            </div>
+          </div>
+
+          <div id="filterControls" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 transition-opacity">
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramCutoff" class="text-xs font-medium">Cutoff Frequency</label>
+                <span id="valCutoff" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">4200 Hz</span>
+              </div>
+              <input id="paramCutoff" type="range" min="0" max="1000" step="1" value="720" class="ios-slider">
+            </div>
+
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramResonance" class="text-xs font-medium">Resonance (Q)</label>
+                <span id="valResonance" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">1.2</span>
+              </div>
+              <input id="paramResonance" type="range" min="0.1" max="20" step="0.1" value="1.2" class="ios-slider">
+            </div>
+          </div>
+        </section>
+
+        <!-- Module 5: Space (Reverb & Delay) & Output -->
+        <section class="ios-card p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">05 / Space &amp; Output</h2>
+            <span class="text-[11px] font-mono" style="color: var(--ios-text-tertiary);">Reverb / Delay / Gain</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <!-- Reverb Mix -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramReverbMix" class="text-xs font-medium">Reverb Mix</label>
+                <span id="valReverbMix" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">10%</span>
+              </div>
+              <input id="paramReverbMix" type="range" min="0" max="100" step="1" value="10" class="ios-slider">
+            </div>
+
+            <!-- Reverb Decay -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramReverbDecay" class="text-xs font-medium">Reverb Decay</label>
+                <span id="valReverbDecay" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">0.5 s</span>
+              </div>
+              <input id="paramReverbDecay" type="range" min="0.1" max="2.2" step="0.05" value="0.5" class="ios-slider">
+            </div>
+
+            <!-- Delay Mix -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramDelayMix" class="text-xs font-medium">Delay Mix</label>
+                <span id="valDelayMix" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">0%</span>
+              </div>
+              <input id="paramDelayMix" type="range" min="0" max="100" step="1" value="0" class="ios-slider">
+            </div>
+
+            <!-- Delay Time -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramDelayTime" class="text-xs font-medium">Delay Time</label>
+                <span id="valDelayTime" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">120 ms</span>
+              </div>
+              <input id="paramDelayTime" type="range" min="20" max="450" step="5" value="120" class="ios-slider">
+            </div>
+
+            <!-- Delay Feedback -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramDelayFeedback" class="text-xs font-medium">Delay Feedback</label>
+                <span id="valDelayFeedback" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">30%</span>
+              </div>
+              <input id="paramDelayFeedback" type="range" min="0" max="75" step="1" value="30" class="ios-slider">
+            </div>
+
+            <!-- Master Volume -->
+            <div>
+              <div class="flex justify-between items-baseline mb-1">
+                <label for="paramVolume" class="text-xs font-medium">Output Volume</label>
+                <span id="valVolume" class="text-xs font-mono tabular-nums" style="color: var(--ios-accent);">80%</span>
+              </div>
+              <input id="paramVolume" type="range" min="5" max="100" step="1" value="80" class="ios-slider">
+            </div>
+          </div>
+        </section>
+
+        <!-- Module 6: User Saved Bank (LocalStorage) -->
+        <section class="ios-card p-4 sm:p-5 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">06 / Saved Patches (Local)</h2>
+            <button id="savePatchBtn" type="button" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5 transition-transform active:scale-95" style="background-color: var(--ios-accent);">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Save Current</span>
+            </button>
+          </div>
+          <div id="savedPatchesList" class="divide-y ios-divider">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       VIEW 2: INDEPENDENT REFERENCE / GUIDE TAB
+       ========================================================================= -->
+  <section id="guideView" class="hidden max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+    <div class="space-y-1">
+      <p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--ios-accent);">Reference / Guide</p>
+      <h2 class="text-2xl font-bold tracking-tight">Synthesizer Manual &amp; Terminology</h2>
+      <p class="text-sm" style="color: var(--ios-text-secondary);">単発効果音（SE）・UIクリック音を作るための基本操作、シンセサイザー用語、およびWAV書き出し仕様のリファレンスです。</p>
+    </div>
+
+    <!-- Guide Card 1: Basic Workflow -->
+    <article class="ios-card p-5 sm:p-6 space-y-4">
+      <h3 class="text-sm font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">1. 基本操作とショートカット</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm leading-relaxed">
+        <div class="p-3.5 rounded-xl space-y-1" style="background-color: var(--ios-seg-bg);">
+          <h4 class="font-semibold">トリガーパッドと連打テスト</h4>
+          <p class="text-xs" style="color: var(--ios-text-secondary);">大型の「TRIGGER SOUND」パッドをタップ、またはキーボードの Space キーを押すたびに発音します。ポリフォニック対応のため、UI操作音のように素早く連打しても音が途切れず自然に重なります。</p>
+        </div>
+        <div class="p-3.5 rounded-xl space-y-1" style="background-color: var(--ios-seg-bg);">
+          <h4 class="font-semibold">Auto-Audition / Pitch Humanize</h4>
+          <p class="text-xs" style="color: var(--ios-text-secondary);">Auto-Audition をONにすると、スライダーを離した瞬間に自動で音が鳴ります。Pitch Humanize をONにすると発音ごとにピッチが微細に揺らぎ、連続タップ時の機械的な単調さを抑えます。</p>
+        </div>
+        <div class="p-3.5 rounded-xl space-y-1" style="background-color: var(--ios-seg-bg);">
+          <h4 class="font-semibold">カテゴリ指定ランダム生成</h4>
+          <p class="text-xs" style="color: var(--ios-text-secondary);">UIクリック・チャイム・8bitレトロ・警告音・魔法/フォリーなどカテゴリを選んで RANDOMIZE を押すと、目的に合った破綻の少ない効果音を無限に探索できます。</p>
+        </div>
+        <div class="p-3.5 rounded-xl space-y-1" style="background-color: var(--ios-seg-bg);">
+          <h4 class="font-semibold">完全ローカル処理</h4>
+          <p class="text-xs" style="color: var(--ios-text-secondary);">すべての音声合成・波形表示・WAVエンコードはブラウザ内蔵の Web Audio API と OfflineAudioContext のみで実行され、外部サーバーへの通信は一切発生しません。</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Guide Card 2: Oscillators & Noise -->
+    <article class="ios-card p-5 sm:p-6 space-y-4">
+      <h3 class="text-sm font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">2. オシレーター波形とノイズ成分</h3>
+      <div class="divide-y ios-divider text-sm">
+        <div class="py-3 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+          <span class="font-mono font-semibold w-36 shrink-0" style="color: var(--ios-accent);">Sine（サイン波）</span>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">倍音を含まない最も純粋で丸い音。上品なUIタップ音、泡のポップ音、柔らかな通知ベルや決定チャイムの土台に最適です。</p>
+        </div>
+        <div class="py-3 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+          <span class="font-mono font-semibold w-36 shrink-0" style="color: var(--ios-accent);">Triangle（三角波）</span>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">サイン波よりわずかに倍音があり、木琴やフルートのような温かみのある輪郭を持ちます。心地よい決定音やマイルドなレトロ音に向いています。</p>
+        </div>
+        <div class="py-3 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+          <span class="font-mono font-semibold w-36 shrink-0" style="color: var(--ios-accent);">Square（矩形波）</span>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">中空でハッキリとしたデジタル質感の音。ファミコンやゲームボーイ風の8bitジャンプ音、コイン音、レトロな電子ブザーの主役になります。</p>
+        </div>
+        <div class="py-3 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+          <span class="font-mono font-semibold w-36 shrink-0" style="color: var(--ios-accent);">Sawtooth（ノコギリ波）</span>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">最も倍音が豊かで鋭い音。警告アラーム、レーザーショット、フィルターと組み合わせた金属的なスイッチ音に効果的です。</p>
+        </div>
+        <div class="py-3 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+          <span class="font-mono font-semibold w-36 shrink-0" style="color: var(--ios-accent);">White / Pink Noise</span>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">音程を持たない「シャー」というノイズ成分。Whiteは高域が鋭くカメラシャッターや硬い金属カチッ音に、Pinkは中低域が豊かで柔らかい打撃感や紙・空気の質感（Foley）に向いています。</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Guide Card 3: Pitch, ADSR, Filter, Space -->
+    <article class="ios-card p-5 sm:p-6 space-y-4">
+      <h3 class="text-sm font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">3. シェイピング用語（Pitch / ADSR / Filter / Space）</h3>
+      <div class="divide-y ios-divider text-sm">
+        <div class="py-3 space-y-1">
+          <h4 class="font-semibold">Pitch Sweep（ピッチエンベロープ）</h4>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">発音した瞬間から音程を急速に上下させる仕組みです。プラス方向（上昇）にすると「ジャンプ音・ポップ音・決定音」、マイナス方向（下降）にすると「レーザーショット・スイッチの沈み込み・キャンセル音」になります。</p>
+        </div>
+        <div class="py-3 space-y-1">
+          <h4 class="font-semibold">Secondary Tone / Chime Step（セカンドトーン）</h4>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">主音から半音単位（Interval）で音程をずらした2つ目の音を重ねます。Step Delay を 0ms にすると和音（ベル・チャイム）、50〜100ms ずらすとコイン音や2音の成功ジングルが作れます。</p>
+        </div>
+        <div class="py-3 space-y-1">
+          <h4 class="font-semibold">ADSR + Hold（音量エンベロープ）</h4>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">
+            <strong>Attack</strong>：音の立ち上がり時間（クリック音は 1〜3ms）。
+            <strong>Decay</strong>：最大音量から減衰する時間。
+            <strong>Sustain Level / Hold</strong>：減衰後に音量を維持する高さと時間。
+            <strong>Release</strong>：音の消え際の余韻時間です。
+          </p>
+        </div>
+        <div class="py-3 space-y-1">
+          <h4 class="font-semibold">Filter（LPF / HPF / BPF &amp; Resonance）</h4>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">
+            <strong>LPF（ローパス）</strong>は高音を削って丸くし、<strong>HPF（ハイパス）</strong>は低音を削って軽くシャープにします。<strong>BPF（バンドパス）</strong>は特定の帯域だけを残すため、金属スイッチや電話音風の質感作りに便利です。<strong>Resonance (Q)</strong> を上げるとカットオフ付近が強調され、クセのある響きが生まれます。
+          </p>
+        </div>
+        <div class="py-3 space-y-1">
+          <h4 class="font-semibold">Reverb / Delay と WAV書き出し</h4>
+          <p class="text-xs leading-relaxed" style="color: var(--ios-text-secondary);">Reverbは空間の残響を、Delayはやまびこのような反復を加えます。書き出し形式は非圧縮の「16-bit PCM WAV」です。UI効果音やゲーム素材で容量を抑えたい場合は <strong>Mono</strong>、リバーブや空間的な広がりを活かしたいチャイム・魔法音は <strong>Stereo</strong> がおすすめです。</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Guide Card 4: Sound Design Recipes -->
+    <article class="ios-card p-5 sm:p-6 space-y-3">
+      <h3 class="text-sm font-semibold uppercase tracking-wider" style="color: var(--ios-text-secondary);">4. 実践レシピのヒント</h3>
+      <ul class="space-y-2 text-xs leading-relaxed" style="color: var(--ios-text-secondary);">
+        <li><strong style="color: var(--ios-text);">気持ちいいUIクリック音：</strong> Sine波（600〜1100Hz）、Pitch Sweep -10st前後（20ms）、Attack 1ms、Decay 30ms、Pink Noiseを10〜20%だけ短く（15ms）混ぜると、物理ボタンのような上質な手触りになります。</li>
+        <li><strong style="color: var(--ios-text);">硬質な金属スイッチ音：</strong> TriangleまたはSquare波を高め（1800Hz前後）にし、HPFまたはBPFで低域をカット。White Noiseを40%ほど加えてDecayを25ms程度に絞ります。</li>
+        <li><strong style="color: var(--ios-text);">キラキラ・通知音：</strong> Sine波（1200Hz以上）＋ Secondary Tone（+7st または +12st、Step Delay 70ms）＋ Reverb Mix 40% ＋ Delay Mix 25% で澄んだ広がりが生まれます。</li>
+      </ul>
+    </article>
+  </section>
+
+  <!-- Toast Notification (Replaces alert) -->
+  <div id="toastContainer" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2 w-full max-w-xs px-4"></div>
+
+  <!-- =========================================================================
+       APPLICATION SCRIPT: Web Audio Synthesis, Scope, Presets, WAV Encoder
+       ========================================================================= -->
+  <script>
+    (() => {
+      'use strict';
+
+      /* -----------------------------------------------------------------------
+         1. Synth Parameter State & Default Configuration
+         ----------------------------------------------------------------------- */
+      const DEFAULT_PARAMS = {
+        name: 'UI Soft Tap',
+        waveform: 'sine',          // sine | triangle | square | sawtooth
+        freq: 760,                 // Hz (40 - 4000)
+        pitchEnv: -11,             // semitones (-36 to +36)
+        pitchTime: 26,             // ms (5 - 1000)
+        lfoDepth: 0,               // Hz (0 - 400)
+        lfoRate: 12,               // Hz (1 - 60)
+        tone2Enabled: false,
+        tone2Interval: 7,          // semitones (-24 to +24)
+        tone2Delay: 80,            // ms (0 - 400)
+        tone2Mix: 70,              // % (0 - 100)
+        noiseType: 'pink',         // white | pink
+        noiseMix: 14,              // % (0 - 100)
+        noiseDecay: 22,            // ms (5 - 1200)
+        attack: 2,                 // ms (1 - 500)
+        decay: 48,                 // ms (10 - 1500)
+        sustain: 0,                // % (0 - 100)
+        hold: 10,                  // ms (0 - 1000)
+        release: 35,               // ms (10 - 1500)
+        filterType: 'lowpass',     // none | lowpass | highpass | bandpass
+        cutoff: 3600,              // Hz (80 - 18000)
+        resonance: 1.4,            // Q (0.1 - 20)
+        reverbMix: 8,              // % (0 - 100)
+        reverbDecay: 0.4,          // sec (0.1 - 2.2)
+        delayMix: 0,               // % (0 - 100)
+        delayTime: 110,            // ms (20 - 450)
+        delayFeedback: 30,         // % (0 - 75)
+        volume: 82                 // % (5 - 100)
+      };
+
+      let params = { ...DEFAULT_PARAMS };
+      let exportChannels = 2;
+      let exportSampleRate = 44100;
+      let activePresetId = 'ui-tap';
+
+      /* -----------------------------------------------------------------------
+         2. 14 Curated One-Tap Presets
+         ----------------------------------------------------------------------- */
+      const PRESETS = [
+        {
+          id: 'ui-tap', label: 'UI Soft Tap', cat: 'ui',
+          p: {
+            waveform: 'sine', freq: 760, pitchEnv: -11, pitchTime: 26, lfoDepth: 0, lfoRate: 10,
+            tone2Enabled: false, tone2Interval: 7, tone2Delay: 60, tone2Mix: 50,
+            noiseType: 'pink', noiseMix: 14, noiseDecay: 22,
+            attack: 2, decay: 48, sustain: 0, hold: 10, release: 35,
+            filterType: 'lowpass', cutoff: 3600, resonance: 1.4,
+            reverbMix: 8, reverbDecay: 0.35, delayMix: 0, delayTime: 100, delayFeedback: 20, volume: 82
+          }
+        },
+        {
+          id: 'metal-switch', label: 'Metal Switch', cat: 'ui',
+          p: {
+            waveform: 'triangle', freq: 1850, pitchEnv: -22, pitchTime: 18, lfoDepth: 0, lfoRate: 12,
+            tone2Enabled: true, tone2Interval: 11, tone2Delay: 0, tone2Mix: 45,
+            noiseType: 'white', noiseMix: 46, noiseDecay: 24,
+            attack: 1, decay: 38, sustain: 0, hold: 5, release: 25,
+            filterType: 'bandpass', cutoff: 2900, resonance: 3.2,
+            reverbMix: 12, reverbDecay: 0.3, delayMix: 0, delayTime: 80, delayFeedback: 15, volume: 85
+          }
+        },
+        {
+          id: 'confirm-chime', label: 'Confirm Chime', cat: 'chime',
+          p: {
+            waveform: 'sine', freq: 587.3, pitchEnv: 0, pitchTime: 30, lfoDepth: 0, lfoRate: 6,
+            tone2Enabled: true, tone2Interval: 7, tone2Delay: 85, tone2Mix: 90,
+            noiseType: 'pink', noiseMix: 4, noiseDecay: 18,
+            attack: 4, decay: 260, sustain: 12, hold: 60, release: 320,
+            filterType: 'lowpass', cutoff: 6500, resonance: 0.8,
+            reverbMix: 34, reverbDecay: 0.95, delayMix: 12, delayTime: 150, delayFeedback: 25, volume: 80
+          }
+        },
+        {
+          id: 'cancel-back', label: 'Cancel / Back', cat: 'ui',
+          p: {
+            waveform: 'triangle', freq: 420, pitchEnv: -8, pitchTime: 95, lfoDepth: 0, lfoRate: 10,
+            tone2Enabled: true, tone2Interval: -5, tone2Delay: 65, tone2Mix: 65,
+            noiseType: 'pink', noiseMix: 8, noiseDecay: 30,
+            attack: 3, decay: 110, sustain: 0, hold: 20, release: 90,
+            filterType: 'lowpass', cutoff: 2100, resonance: 1.0,
+            reverbMix: 10, reverbDecay: 0.4, delayMix: 0, delayTime: 100, delayFeedback: 20, volume: 80
+          }
+        },
+        {
+          id: 'notify-bell', label: 'Notify Bell', cat: 'chime',
+          p: {
+            waveform: 'sine', freq: 1046.5, pitchEnv: 0.5, pitchTime: 25, lfoDepth: 4, lfoRate: 6.5,
+            tone2Enabled: true, tone2Interval: 12, tone2Delay: 0, tone2Mix: 55,
+            noiseType: 'white', noiseMix: 6, noiseDecay: 14,
+            attack: 2, decay: 460, sustain: 8, hold: 40, release: 520,
+            filterType: 'lowpass', cutoff: 9500, resonance: 1.2,
+            reverbMix: 46, reverbDecay: 1.35, delayMix: 16, delayTime: 190, delayFeedback: 28, volume: 78
+          }
+        },
+        {
+          id: 'warning-alarm', label: 'Warning Alarm', cat: 'alert',
+          p: {
+            waveform: 'sawtooth', freq: 680, pitchEnv: 0, pitchTime: 40, lfoDepth: 95, lfoRate: 14,
+            tone2Enabled: true, tone2Interval: 6, tone2Delay: 170, tone2Mix: 85,
+            noiseType: 'white', noiseMix: 8, noiseDecay: 150,
+            attack: 6, decay: 180, sustain: 65, hold: 220, release: 120,
+            filterType: 'lowpass', cutoff: 3200, resonance: 2.8,
+            reverbMix: 14, reverbDecay: 0.5, delayMix: 18, delayTime: 140, delayFeedback: 32, volume: 72
+          }
+        },
+        {
+          id: 'sparkle', label: 'Sparkle Shimmer', cat: 'magic',
+          p: {
+            waveform: 'sine', freq: 1568, pitchEnv: 12, pitchTime: 180, lfoDepth: 48, lfoRate: 24,
+            tone2Enabled: true, tone2Interval: 7, tone2Delay: 75, tone2Mix: 90,
+            noiseType: 'white', noiseMix: 12, noiseDecay: 120,
+            attack: 8, decay: 380, sustain: 15, hold: 90, release: 460,
+            filterType: 'highpass', cutoff: 900, resonance: 1.5,
+            reverbMix: 54, reverbDecay: 1.55, delayMix: 34, delayTime: 115, delayFeedback: 46, volume: 78
+          }
+        },
+        {
+          id: 'coin-pickup', label: 'Coin Pickup', cat: 'retro',
+          p: {
+            waveform: 'square', freq: 987.8, pitchEnv: 0, pitchTime: 20, lfoDepth: 0, lfoRate: 10,
+            tone2Enabled: true, tone2Interval: 5, tone2Delay: 75, tone2Mix: 100,
+            noiseType: 'white', noiseMix: 0, noiseDecay: 20,
+            attack: 1, decay: 260, sustain: 10, hold: 45, release: 140,
+            filterType: 'lowpass', cutoff: 7200, resonance: 0.7,
+            reverbMix: 10, reverbDecay: 0.4, delayMix: 0, delayTime: 100, delayFeedback: 20, volume: 68
+          }
+        },
+        {
+          id: 'retro-jump', label: '8-bit Jump', cat: 'retro',
+          p: {
+            waveform: 'square', freq: 210, pitchEnv: 19, pitchTime: 195, lfoDepth: 0, lfoRate: 10,
+            tone2Enabled: false, tone2Interval: 12, tone2Delay: 50, tone2Mix: 50,
+            noiseType: 'white', noiseMix: 5, noiseDecay: 30,
+            attack: 2, decay: 180, sustain: 20, hold: 35, release: 70,
+            filterType: 'lowpass', cutoff: 5800, resonance: 1.0,
+            reverbMix: 5, reverbDecay: 0.25, delayMix: 0, delayTime: 100, delayFeedback: 20, volume: 68
+          }
+        },
+        {
+          id: 'retro-laser', label: '8-bit Shot', cat: 'retro',
+          p: {
+            waveform: 'sawtooth', freq: 1320, pitchEnv: -32, pitchTime: 165, lfoDepth: 32, lfoRate: 38,
+            tone2Enabled: false, tone2Interval: -12, tone2Delay: 20, tone2Mix: 40,
+            noiseType: 'white', noiseMix: 22, noiseDecay: 95,
+            attack: 1, decay: 160, sustain: 0, hold: 15, release: 65,
+            filterType: 'lowpass', cutoff: 5200, resonance: 4.5,
+            reverbMix: 12, reverbDecay: 0.45, delayMix: 10, delayTime: 85, delayFeedback: 22, volume: 72
+          }
+        },
+        {
+          id: 'glass-pop', label: 'Bubble Pop', cat: 'ui',
+          p: {
+            waveform: 'sine', freq: 340, pitchEnv: 18, pitchTime: 65, lfoDepth: 0, lfoRate: 10,
+            tone2Enabled: false, tone2Interval: 12, tone2Delay: 0, tone2Mix: 30,
+            noiseType: 'pink', noiseMix: 6, noiseDecay: 16,
+            attack: 2, decay: 68, sustain: 0, hold: 8, release: 40,
+            filterType: 'lowpass', cutoff: 4800, resonance: 3.5,
+            reverbMix: 18, reverbDecay: 0.55, delayMix: 0, delayTime: 100, delayFeedback: 20, volume: 85
+          }
+        },
+        {
+          id: 'power-up', label: 'Power Up', cat: 'magic',
+          p: {
+            waveform: 'triangle', freq: 330, pitchEnv: 24, pitchTime: 420, lfoDepth: 26, lfoRate: 18,
+            tone2Enabled: true, tone2Interval: 7, tone2Delay: 110, tone2Mix: 80,
+            noiseType: 'pink', noiseMix: 10, noiseDecay: 280,
+            attack: 18, decay: 360, sustain: 35, hold: 120, release: 260,
+            filterType: 'lowpass', cutoff: 6400, resonance: 2.2,
+            reverbMix: 32, reverbDecay: 1.0, delayMix: 24, delayTime: 130, delayFeedback: 35, volume: 78
+          }
+        },
+        {
+          id: 'error-deny', label: 'Error Deny', cat: 'alert',
+          p: {
+            waveform: 'sawtooth', freq: 165, pitchEnv: -4, pitchTime: 140, lfoDepth: 14, lfoRate: 28,
+            tone2Enabled: true, tone2Interval: 1, tone2Delay: 0, tone2Mix: 75,
+            noiseType: 'pink', noiseMix: 14, noiseDecay: 120,
+            attack: 4, decay: 140, sustain: 45, hold: 140, release: 100,
+            filterType: 'lowpass', cutoff: 1350, resonance: 2.5,
+            reverbMix: 8, reverbDecay: 0.3, delayMix: 0, delayTime: 100, delayFeedback: 20, volume: 75
+          }
+        },
+        {
+          id: 'camera-shutter', label: 'Camera Shutter', cat: 'ui',
+          p: {
+            waveform: 'triangle', freq: 240, pitchEnv: -24, pitchTime: 22, lfoDepth: 0, lfoRate: 10,
+            tone2Enabled: true, tone2Interval: 12, tone2Delay: 55, tone2Mix: 55,
+            noiseType: 'white', noiseMix: 78, noiseDecay: 42,
+            attack: 1, decay: 38, sustain: 0, hold: 5, release: 28,
+            filterType: 'bandpass', cutoff: 2400, resonance: 1.6,
+            reverbMix: 12, reverbDecay: 0.25, delayMix: 0, delayTime: 70, delayFeedback: 10, volume: 88
+          }
+        }
+      ];
+
+      /* -----------------------------------------------------------------------
+         3. Deterministic PRNG & Procedural Audio Buffers (Noise & Reverb IR)
+         ----------------------------------------------------------------------- */
+      function mulberry32(seed) {
+        let a = seed >>> 0;
+        return function () {
+          a |= 0;
+          a = (a + 0x6D2B79F5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function createNoiseBuffer(ctx, type, durationSec, channels = 2) {
+        const sr = ctx.sampleRate;
+        const length = Math.max(1, Math.ceil(sr * durationSec));
+        const buffer = ctx.createBuffer(channels, length, sr);
+
+        for (let ch = 0; ch < channels; ch++) {
+          const data = buffer.getChannelData(ch);
+          const rand = mulberry32(1337 + ch * 7919 + (type === 'pink' ? 99 : 0));
+          if (type === 'white') {
+            for (let i = 0; i < length; i++) {
+              data[i] = rand() * 2 - 1;
+            }
+          } else {
+            // Paul Kellet's refined Pink Noise filter
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+            for (let i = 0; i < length; i++) {
+              const white = rand() * 2 - 1;
+              b0 = 0.99886 * b0 + white * 0.0555179;
+              b1 = 0.99332 * b1 + white * 0.0750759;
+              b2 = 0.96900 * b2 + white * 0.1538520;
+              b3 = 0.86650 * b3 + white * 0.3104856;
+              b4 = 0.55000 * b4 + white * 0.5329522;
+              b5 = -0.7616 * b5 - white * 0.0168980;
+              const pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+              b6 = white * 0.115926;
+              data[i] = Math.max(-1, Math.min(1, pink * 0.14));
+            }
+          }
+        }
+        return buffer;
+      }
+
+      function createReverbIR(ctx, decaySec, channels = 2) {
+        const sr = ctx.sampleRate;
+        const length = Math.max(1, Math.ceil(sr * Math.max(0.1, decaySec)));
+        const buffer = ctx.createBuffer(channels, length, sr);
+
+        for (let ch = 0; ch < channels; ch++) {
+          const data = buffer.getChannelData(ch);
+          const rand = mulberry32(9001 + ch * 4211);
+          // Exponential decay with mild early damping for clean studio tail
+          for (let i = 0; i < length; i++) {
+            const t = i / length;
+            const env = Math.pow(1 - t, 2.6);
+            data[i] = (rand() * 2 - 1) * env * 0.65;
+          }
+        }
+        return buffer;
+      }
+
+      /* -----------------------------------------------------------------------
+         4. Shared Synthesis Engine (Used by Both Real-Time & Offline WAV)
+         ----------------------------------------------------------------------- */
+      function computeTotalDurationSec(p) {
+        const envSec = (p.attack + p.decay + p.hold + p.release) / 1000;
+        const tone2Offset = p.tone2Enabled ? (p.tone2Delay / 1000) : 0;
+        const noiseSec = p.noiseMix > 0 ? (p.noiseDecay / 1000) : 0;
+        const coreDuration = Math.max(envSec + tone2Offset, noiseSec);
+        const reverbTail = p.reverbMix > 0 ? Math.min(2.2, p.reverbDecay * 0.85) : 0;
+        const delayTail = p.delayMix > 0 ? Math.min(1.6, (p.delayTime / 1000) * (1 + (p.delayFeedback / 100) * 4.5)) : 0;
+        const total = coreDuration + Math.max(reverbTail, delayTail) + 0.04;
+        return Math.max(0.06, Math.min(3.8, total));
+      }
+
+      /**
+       * Renders a single-shot sound into any BaseAudioContext (AudioContext or OfflineAudioContext).
+       */
+      function triggerSoundGraph(ctx, destination, p, startTime, pitchJitterRatio = 1.0, channelCount = 2) {
+        const now = startTime;
+        const atk = Math.max(0.001, p.attack / 1000);
+        const dec = Math.max(0.01, p.decay / 1000);
+        const hold = Math.max(0, p.hold / 1000);
+        const rel = Math.max(0.01, p.release / 1000);
+        const sus = Math.max(0.0001, (p.sustain / 100));
+        const envTotal = atk + dec + hold + rel;
+
+        // Voice summing bus -> Filter -> Space (Dry/Reverb/Delay) -> Output Gain
+        const voiceBus = ctx.createGain();
+        voiceBus.gain.setValueAtTime(1.0, now);
+
+        // Helper to spawn an oscillator voice with Pitch Envelope, LFO & ADSR
+        function spawnOscVoice(baseHz, offsetSec, gainScale) {
+          const t0 = now + offsetSec;
+          const osc = ctx.createOscillator();
+          osc.type = p.waveform;
+
+          const fStart = Math.max(20, Math.min(18000, baseHz * pitchJitterRatio));
+          const fEnd = Math.max(20, Math.min(18000, fStart * Math.pow(2, p.pitchEnv / 12)));
+          const sweepSec = Math.max(0.005, p.pitchTime / 1000);
+
+          osc.frequency.setValueAtTime(fStart, t0);
+          if (Math.abs(p.pitchEnv) > 0.05) {
+            osc.frequency.exponentialRampToValueAtTime(fEnd, t0 + sweepSec);
+          }
+
+          // Optional FM / Vibrato LFO
+          let lfo = null;
+          if (p.lfoDepth > 0.1) {
+            lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.type = 'sine';
+            lfo.frequency.setValueAtTime(p.lfoRate, t0);
+            lfoGain.gain.setValueAtTime(p.lfoDepth, t0);
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start(t0);
+            lfo.stop(t0 + envTotal + 0.05);
+          }
+
+          // Amplitude Envelope (ADSR + Hold)
+          const amp = ctx.createGain();
+          const peakGain = Math.max(0.0001, gainScale);
+          const susGain = Math.max(0.0001, peakGain * sus);
+
+          amp.gain.setValueAtTime(0.0001, t0);
+          amp.gain.linearRampToValueAtTime(peakGain, t0 + atk);
+          amp.gain.exponentialRampToValueAtTime(susGain, t0 + atk + dec);
+          amp.gain.setValueAtTime(susGain, t0 + atk + dec + hold);
+          amp.gain.exponentialRampToValueAtTime(0.0001, t0 + atk + dec + hold + rel);
+
+          osc.connect(amp);
+          amp.connect(voiceBus);
+
+          osc.start(t0);
+          osc.stop(t0 + envTotal + 0.03);
+        }
+
+        // 1. Primary Oscillator (scaled so noise mix balances naturally)
+        const oscRatio = p.noiseMix >= 98 ? 0.02 : (1 - (p.noiseMix / 100) * 0.55);
+        spawnOscVoice(p.freq, 0, oscRatio * 0.72);
+
+        // 2. Secondary Tone (Chime / Coin / Bell Harmonic)
+        if (p.tone2Enabled && p.tone2Mix > 0) {
+          const freq2 = p.freq * Math.pow(2, p.tone2Interval / 12);
+          const delay2 = Math.max(0, p.tone2Delay / 1000);
+          spawnOscVoice(freq2, delay2, oscRatio * 0.62 * (p.tone2Mix / 100));
+        }
+
+        // 3. Noise Generator Layer (White / Pink)
+        if (p.noiseMix > 0) {
+          const nDec = Math.max(0.005, p.noiseDecay / 1000);
+          const nBuf = createNoiseBuffer(ctx, p.noiseType, nDec + 0.06, channelCount);
+          const nSrc = ctx.createBufferSource();
+          nSrc.buffer = nBuf;
+
+          const nGain = ctx.createGain();
+          const nPeak = Math.max(0.0001, (p.noiseMix / 100) * 0.85);
+          const nAtk = Math.min(0.015, atk);
+          nGain.gain.setValueAtTime(0.0001, now);
+          nGain.gain.linearRampToValueAtTime(nPeak, now + nAtk);
+          nGain.gain.exponentialRampToValueAtTime(0.0001, now + nAtk + nDec);
+
+          nSrc.connect(nGain);
+          nGain.connect(voiceBus);
+
+          nSrc.start(now);
+          nSrc.stop(now + nAtk + nDec + 0.03);
+        }
+
+        // 4. Filter Stage
+        let postFilterNode = voiceBus;
+        if (p.filterType !== 'none') {
+          const filter = ctx.createBiquadFilter();
+          filter.type = p.filterType;
+          filter.frequency.setValueAtTime(Math.max(40, Math.min(ctx.sampleRate * 0.45, p.cutoff)), now);
+          filter.Q.setValueAtTime(Math.max(0.1, p.resonance), now);
+          voiceBus.connect(filter);
+          postFilterNode = filter;
+        }
+
+        // 5. Space Stage (Dry + Reverb + Delay)
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(Math.max(0.01, (p.volume / 100) * 0.9), now);
+
+        // Dry path
+        const dryGain = ctx.createGain();
+        const wetFactor = Math.min(0.5, (p.reverbMix / 100) * 0.35 + (p.delayMix / 100) * 0.25);
+        dryGain.gain.setValueAtTime(1 - wetFactor, now);
+        postFilterNode.connect(dryGain);
+        dryGain.connect(masterGain);
+
+        // Reverb path
+        if (p.reverbMix > 0) {
+          const convolver = ctx.createConvolver();
+          convolver.buffer = createReverbIR(ctx, p.reverbDecay, channelCount);
+          const revGain = ctx.createGain();
+          revGain.gain.setValueAtTime((p.reverbMix / 100) * 0.85, now);
+          postFilterNode.connect(convolver);
+          convolver.connect(revGain);
+          revGain.connect(masterGain);
+        }
+
+        // Delay path
+        if (p.delayMix > 0) {
+          const delay = ctx.createDelay(1.0);
+          delay.delayTime.setValueAtTime(Math.max(0.01, p.delayTime / 1000), now);
+          const fb = ctx.createGain();
+          fb.gain.setValueAtTime(Math.min(0.78, p.delayFeedback / 100), now);
+          const delWet = ctx.createGain();
+          delWet.gain.setValueAtTime((p.delayMix / 100) * 0.72, now);
+
+          // Gentle high-cut inside feedback loop for pleasant echoes
+          const delDamp = ctx.createBiquadFilter();
+          delDamp.type = 'lowpass';
+          delDamp.frequency.setValueAtTime(4800, now);
+
+          postFilterNode.connect(delay);
+          delay.connect(delDamp);
+          delDamp.connect(fb);
+          fb.connect(delay);
+          delDamp.connect(delWet);
+          delWet.connect(masterGain);
+        }
+
+        masterGain.connect(destination);
+      }
+
+      /* -----------------------------------------------------------------------
+         5. Live AudioContext, Limiter & Real-Time Analyser
+         ----------------------------------------------------------------------- */
+      let liveCtx = null;
+      let liveLimiter = null;
+      let liveAnalyser = null;
+      let scopeData = null;
+
+      function ensureLiveAudio() {
+        if (!liveCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          liveCtx = new AudioCtx();
+
+          liveLimiter = liveCtx.createDynamicsCompressor();
+          liveLimiter.threshold.setValueAtTime(-3, liveCtx.currentTime);
+          liveLimiter.knee.setValueAtTime(12, liveCtx.currentTime);
+          liveLimiter.ratio.setValueAtTime(12, liveCtx.currentTime);
+          liveLimiter.attack.setValueAtTime(0.002, liveCtx.currentTime);
+          liveLimiter.release.setValueAtTime(0.12, liveCtx.currentTime);
+
+          liveAnalyser = liveCtx.createAnalyser();
+          liveAnalyser.fftSize = 2048;
+          liveAnalyser.smoothingTimeConstant = 0.65;
+          scopeData = new Float32Array(liveAnalyser.fftSize);
+
+          liveLimiter.connect(liveAnalyser);
+          liveAnalyser.connect(liveCtx.destination);
+        }
+        if (liveCtx.state === 'suspended') {
+          liveCtx.resume();
+        }
+      }
+
+      function playSound(useHumanize = true) {
+        try {
+          ensureLiveAudio();
+          const humanizeOn = useHumanize && document.getElementById('optPitchVar').checked;
+          const jitter = humanizeOn ? Math.pow(2, ((Math.random() * 2 - 1) * 1.1) / 12) : 1.0;
+          triggerSoundGraph(liveCtx, liveLimiter, params, liveCtx.currentTime + 0.004, jitter, 2);
+        } catch (err) {
+          showToast('Audio playback error: ' + err.message, 'error');
+        }
+      }
+
+      /* -----------------------------------------------------------------------
+         6. 16-bit PCM WAV Offline Rendering & Download
+         ----------------------------------------------------------------------- */
+      function encodeWav16Bit(audioBuffer) {
+        const numCh = audioBuffer.numberOfChannels;
+        const sampleRate = audioBuffer.sampleRate;
+        const numFrames = audioBuffer.length;
+        const bytesPerSample = 2;
+        const blockAlign = numCh * bytesPerSample;
+        const dataSize = numFrames * blockAlign;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+
+        function writeStr(offset, str) {
+          for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset + i, str.charCodeAt(i));
+          }
+        }
+
+        // RIFF WAVE Header
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + dataSize, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);          // Subchunk1Size (PCM)
+        view.setUint16(20, 1, true);           // AudioFormat (1 = PCM)
+        view.setUint16(22, numCh, true);       // NumChannels
+        view.setUint32(24, sampleRate, true);  // SampleRate
+        view.setUint32(28, sampleRate * blockAlign, true); // ByteRate
+        view.setUint16(32, blockAlign, true);  // BlockAlign
+        view.setUint16(34, 16, true);          // BitsPerSample
+        writeStr(36, 'data');
+        view.setUint32(40, dataSize, true);
+
+        const channels = [];
+        for (let c = 0; c < numCh; c++) {
+          channels.push(audioBuffer.getChannelData(c));
+        }
+
+        // Soft-clip protection & 16-bit signed PCM interleaving
+        let offset = 44;
+        for (let i = 0; i < numFrames; i++) {
+          for (let c = 0; c < numCh; c++) {
+            let sample = channels[c][i];
+            // Soft tanh limiter for clean headroom without harsh digital clipping
+            if (Math.abs(sample) > 0.95) {
+              sample = Math.tanh(sample);
+            }
+            const clamped = Math.max(-1, Math.min(1, sample));
+            const int16 = clamped < 0 ? Math.round(clamped * 32768) : Math.round(clamped * 32767);
+            view.setInt16(offset, int16, true);
+            offset += 2;
+          }
+        }
+        return new Blob([buffer], { type: 'audio/wav' });
+      }
+
+      async function exportWavFile() {
+        const btn = document.getElementById('exportWavBtn');
+        const originalHtml = btn.innerHTML;
+        try {
+          btn.disabled = true;
+          btn.style.opacity = '0.7';
+
+          const durSec = computeTotalDurationSec(params);
+          const length = Math.ceil(durSec * exportSampleRate);
+          const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+          const offCtx = new OfflineCtx(exportChannels, length, exportSampleRate);
+
+          // Mirror live compressor stage for identical dynamics
+          const comp = offCtx.createDynamicsCompressor();
+          comp.threshold.setValueAtTime(-3, 0);
+          comp.knee.setValueAtTime(12, 0);
+          comp.ratio.setValueAtTime(12, 0);
+          comp.attack.setValueAtTime(0.002, 0);
+          comp.release.setValueAtTime(0.12, 0);
+          comp.connect(offCtx.destination);
+
+          triggerSoundGraph(offCtx, comp, params, 0.002, 1.0, exportChannels);
+          const rendered = await offCtx.startRendering();
+
+          // Trim excess trailing digital silence while keeping a neat 25ms tail
+          const trimmed = trimTrailingSilence(rendered, 0.0005, 0.025);
+          const wavBlob = encodeWav16Bit(trimmed);
+
+          const rawName = (document.getElementById('exportFilename').value || 'sfx-sound').trim();
+          const safeName = rawName.replace(/[^a-zA-Z0-9_\-]/g, '_') || 'sfx-sound';
+          const url = URL.createObjectURL(wavBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${safeName}.wav`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+          const kb = (wavBlob.size / 1024).toFixed(1);
+          const modeTxt = exportChannels === 1 ? 'Mono' : 'Stereo';
+          showToast(`Exported ${safeName}.wav (${modeTxt}, ${kb} KB)`);
+        } catch (err) {
+          showToast('WAV export failed: ' + err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.innerHTML = originalHtml;
+        }
+      }
+
+      function trimTrailingSilence(buffer, threshold, padSec) {
+        const sr = buffer.sampleRate;
+        const numCh = buffer.numberOfChannels;
+        let lastActive = Math.min(buffer.length - 1, Math.floor(sr * 0.05));
+
+        for (let i = buffer.length - 1; i >= lastActive; i--) {
+          let peak = 0;
+          for (let c = 0; c < numCh; c++) {
+            const v = Math.abs(buffer.getChannelData(c)[i]);
+            if (v > peak) peak = v;
+          }
+          if (peak > threshold) {
+            lastActive = i;
+            break;
+          }
+        }
+
+        const finalLen = Math.min(buffer.length, lastActive + Math.ceil(sr * padSec));
+        const AudioCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        const out = new AudioCtx(numCh, Math.max(1, finalLen), sr).createBuffer(numCh, Math.max(1, finalLen), sr);
+        for (let c = 0; c < numCh; c++) {
+          out.getChannelData(c).set(buffer.getChannelData(c).subarray(0, finalLen));
+        }
+        return out;
+      }
+
+      /* -----------------------------------------------------------------------
+         7. Logarithmic Frequency Mappers for Smooth Slider Feel
+         ----------------------------------------------------------------------- */
+      function sliderToFreq(val, minHz, maxHz) {
+        const norm = val / 1000;
+        return Math.round(minHz * Math.pow(maxHz / minHz, norm));
+      }
+
+      function freqToSlider(hz, minHz, maxHz) {
+        const clamped = Math.max(minHz, Math.min(maxHz, hz));
+        return Math.round((Math.log(clamped / minHz) / Math.log(maxHz / minHz)) * 1000);
+      }
+
+      /* -----------------------------------------------------------------------
+         8. Smart Category-Aware Randomizer
+         ----------------------------------------------------------------------- */
+      function randRange(min, max) {
+        return min + Math.random() * (max - min);
+      }
+      function randInt(min, max) {
+        return Math.floor(randRange(min, max + 1));
+      }
+      function pick(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function randomizePatch() {
+        let cat = document.getElementById('randomCategorySelect').value;
+        if (cat === 'all') {
+          cat = pick(['ui', 'chime', 'retro', 'alert', 'magic']);
+        }
+
+        const p = { ...DEFAULT_PARAMS };
+
+        if (cat === 'ui') {
+          p.name = 'Random UI Click';
+          p.waveform = pick(['sine', 'triangle']);
+          p.freq = randInt(320, 2200);
+          p.pitchEnv = pick([-1, 1]) * randInt(4, 22);
+          p.pitchTime = randInt(10, 55);
+          p.lfoDepth = 0;
+          p.lfoRate = 10;
+          p.tone2Enabled = Math.random() < 0.35;
+          p.tone2Interval = pick([-5, 5, 7, 12]);
+          p.tone2Delay = pick([0, 35, 55]);
+          p.tone2Mix = randInt(30, 75);
+          p.noiseType = pick(['white', 'pink']);
+          p.noiseMix = randInt(5, 55);
+          p.noiseDecay = randInt(10, 40);
+          p.attack = randInt(1, 4);
+          p.decay = randInt(20, 85);
+          p.sustain = 0;
+          p.hold = randInt(0, 15);
+          p.release = randInt(15, 60);
+          p.filterType = pick(['lowpass', 'bandpass', 'highpass']);
+          p.cutoff = randInt(1400, 7500);
+          p.resonance = Number(randRange(0.8, 3.8).toFixed(1));
+          p.reverbMix = randInt(0, 18);
+          p.reverbDecay = Number(randRange(0.2, 0.5).toFixed(2));
+          p.delayMix = 0;
+          p.volume = 84;
+        } else if (cat === 'chime') {
+          p.name = 'Random Chime';
+          p.waveform = pick(['sine', 'triangle']);
+          // Musical pentatonic frequencies for pleasant chimes
+          const musicalFreqs = [440, 493.9, 523.3, 587.3, 659.3, 784, 880, 1046.5, 1174.7, 1318.5];
+          p.freq = pick(musicalFreqs);
+          p.pitchEnv = Math.random() < 0.3 ? randRange(-1, 2) : 0;
+          p.pitchTime = randInt(20, 80);
+          p.lfoDepth = Math.random() < 0.3 ? randInt(2, 10) : 0;
+          p.lfoRate = randInt(4, 9);
+          p.tone2Enabled = true;
+          p.tone2Interval = pick([4, 5, 7, 12, 16]);
+          p.tone2Delay = pick([0, 65, 85, 110]);
+          p.tone2Mix = randInt(55, 95);
+          p.noiseType = 'white';
+          p.noiseMix = randInt(0, 10);
+          p.noiseDecay = randInt(10, 25);
+          p.attack = randInt(2, 12);
+          p.decay = randInt(220, 580);
+          p.sustain = randInt(0, 20);
+          p.hold = randInt(20, 90);
+          p.release = randInt(240, 620);
+          p.filterType = 'lowpass';
+          p.cutoff = randInt(4200, 12000);
+          p.resonance = Number(randRange(0.7, 2.0).toFixed(1));
+          p.reverbMix = randInt(22, 55);
+          p.reverbDecay = Number(randRange(0.7, 1.6).toFixed(2));
+          p.delayMix = randInt(0, 25);
+          p.delayTime = randInt(110, 240);
+          p.delayFeedback = randInt(20, 42);
+          p.volume = 80;
+        } else if (cat === 'retro') {
+          p.name = 'Random 8-bit';
+          p.waveform = pick(['square', 'sawtooth', 'triangle']);
+          p.freq = randInt(160, 1400);
+          p.pitchEnv = pick([-30, -24, -15, 0, 12, 18, 24]) + randInt(-3, 3);
+          p.pitchTime = randInt(35, 260);
+          p.lfoDepth = Math.random() < 0.4 ? randInt(15, 75) : 0;
+          p.lfoRate = randInt(14, 48);
+          p.tone2Enabled = Math.random() < 0.5;
+          p.tone2Interval = pick([-12, 5, 7, 12]);
+          p.tone2Delay = pick([45, 70, 95]);
+          p.tone2Mix = randInt(60, 100);
+          p.noiseType = 'white';
+          p.noiseMix = Math.random() < 0.45 ? randInt(12, 45) : 0;
+          p.noiseDecay = randInt(25, 160);
+          p.attack = randInt(1, 5);
+          p.decay = randInt(90, 320);
+          p.sustain = randInt(0, 30);
+          p.hold = randInt(10, 70);
+          p.release = randInt(40, 160);
+          p.filterType = pick(['none', 'lowpass']);
+          p.cutoff = randInt(3200, 9500);
+          p.resonance = Number(randRange(0.8, 5.5).toFixed(1));
+          p.reverbMix = randInt(0, 14);
+          p.reverbDecay = 0.35;
+          p.delayMix = Math.random() < 0.25 ? randInt(10, 25) : 0;
+          p.delayTime = randInt(70, 140);
+          p.delayFeedback = randInt(15, 35);
+          p.volume = 70;
+        } else if (cat === 'alert') {
+          p.name = 'Random Alert';
+          p.waveform = pick(['sawtooth', 'square', 'triangle']);
+          p.freq = randInt(150, 950);
+          p.pitchEnv = randInt(-10, 10);
+          p.pitchTime = randInt(40, 180);
+          p.lfoDepth = randInt(20, 140);
+          p.lfoRate = randInt(8, 32);
+          p.tone2Enabled = Math.random() < 0.65;
+          p.tone2Interval = pick([1, 6, -6, 12]);
+          p.tone2Delay = pick([0, 120, 180]);
+          p.tone2Mix = randInt(65, 95);
+          p.noiseType = pick(['white', 'pink']);
+          p.noiseMix = randInt(0, 22);
+          p.noiseDecay = randInt(60, 220);
+          p.attack = randInt(2, 12);
+          p.decay = randInt(120, 260);
+          p.sustain = randInt(35, 75);
+          p.hold = randInt(100, 260);
+          p.release = randInt(70, 180);
+          p.filterType = 'lowpass';
+          p.cutoff = randInt(1200, 4800);
+          p.resonance = Number(randRange(1.5, 6.0).toFixed(1));
+          p.reverbMix = randInt(8, 22);
+          p.reverbDecay = 0.45;
+          p.delayMix = randInt(0, 20);
+          p.delayTime = randInt(100, 190);
+          p.delayFeedback = 28;
+          p.volume = 74;
+        } else {
+          // magic / foley
+          p.name = 'Random Magic FX';
+          p.waveform = pick(['sine', 'triangle', 'sawtooth']);
+          p.freq = randInt(280, 1900);
+          p.pitchEnv = pick([-24, -14, 14, 24]) + randInt(-4, 4);
+          p.pitchTime = randInt(110, 480);
+          p.lfoDepth = randInt(12, 110);
+          p.lfoRate = randInt(8, 34);
+          p.tone2Enabled = true;
+          p.tone2Interval = pick([4, 7, 11, 12, 19]);
+          p.tone2Delay = randInt(40, 150);
+          p.tone2Mix = randInt(50, 95);
+          p.noiseType = pick(['white', 'pink']);
+          p.noiseMix = randInt(8, 35);
+          p.noiseDecay = randInt(80, 380);
+          p.attack = randInt(8, 55);
+          p.decay = randInt(240, 620);
+          p.sustain = randInt(10, 40);
+          p.hold = randInt(40, 160);
+          p.release = randInt(220, 680);
+          p.filterType = pick(['lowpass', 'highpass', 'bandpass']);
+          p.cutoff = randInt(900, 8500);
+          p.resonance = Number(randRange(1.5, 7.5).toFixed(1));
+          p.reverbMix = randInt(30, 65);
+          p.reverbDecay = Number(randRange(0.8, 1.8).toFixed(2));
+          p.delayMix = randInt(15, 42);
+          p.delayTime = randInt(85, 220);
+          p.delayFeedback = randInt(25, 52);
+          p.volume = 78;
+        }
+
+        activePresetId = null;
+        params = p;
+        syncUIFromParams();
+        updateExportFilename(p.name);
+        triggerPadVisual();
+        playSound(false);
+      }
+
+      /* -----------------------------------------------------------------------
+         9. UI Sync, Sliders, Segmented Controls & ADSR / Scope Drawing
+         ----------------------------------------------------------------------- */
+      function setSliderFill(input) {
+        const min = parseFloat(input.min) || 0;
+        const max = parseFloat(input.max) || 100;
+        const val = parseFloat(input.value) || 0;
+        const pct = ((val - min) / (max - min)) * 100;
+        input.style.setProperty('--fill', `${Math.max(0, Math.min(100, pct))}%`);
+      }
+
+      function setSegmentedActive(containerId, value) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.querySelectorAll('button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.value === String(value));
+        });
+      }
+
+      function updateExportEstimates() {
+        const dur = computeTotalDurationSec(params);
+        document.getElementById('estDurationReadout').textContent = `${dur.toFixed(2)}s`;
+        const bytes = 44 + Math.ceil(dur * exportSampleRate) * exportChannels * 2;
+        const kb = Math.max(1, Math.round(bytes / 1024));
+        document.getElementById('estWavSize').textContent = `~${kb} KB`;
+      }
+
+      function updateExportFilename(name) {
+        const slug = String(name || 'custom-sfx')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        document.getElementById('exportFilename').value = `sfx-${slug || 'patch'}`;
+      }
+
+      function syncUIFromParams() {
+        // Active preset chip highlight
+        document.querySelectorAll('.preset-chip').forEach(el => {
+          el.classList.toggle('active', el.dataset.id === activePresetId);
+        });
+        document.getElementById('activePatchLabel').textContent = params.name || 'Custom Patch';
+
+        // Segmented controls
+        setSegmentedActive('waveformSeg', params.waveform);
+        setSegmentedActive('noiseTypeSeg', params.noiseType);
+        setSegmentedActive('filterTypeSeg', params.filterType);
+
+        // Toggle visibility states
+        const tone2Cb = document.getElementById('paramTone2Enabled');
+        tone2Cb.checked = !!params.tone2Enabled;
+        const tone2Box = document.getElementById('tone2Controls');
+        tone2Box.classList.toggle('opacity-45', !params.tone2Enabled);
+        tone2Box.classList.toggle('pointer-events-none', !params.tone2Enabled);
+
+        const filterBox = document.getElementById('filterControls');
+        const filterOff = params.filterType === 'none';
+        filterBox.classList.toggle('opacity-45', filterOff);
+        filterBox.classList.toggle('pointer-events-none', filterOff);
+
+        // Sliders
+        const map = [
+          ['paramFreq', freqToSlider(params.freq, 40, 4000), 'valFreq', `${Math.round(params.freq)} Hz`],
+          ['paramPitchEnv', params.pitchEnv, 'valPitchEnv', `${params.pitchEnv > 0 ? '+' : ''}${params.pitchEnv} st`],
+          ['paramPitchTime', params.pitchTime, 'valPitchTime', `${Math.round(params.pitchTime)} ms`],
+          ['paramLfoDepth', params.lfoDepth, 'valLfoDepth', `${Math.round(params.lfoDepth)} Hz`],
+          ['paramLfoRate', params.lfoRate, 'valLfoRate', `${params.lfoRate} Hz`],
+          ['paramTone2Interval', params.tone2Interval, 'valTone2Interval', `${params.tone2Interval > 0 ? '+' : ''}${params.tone2Interval} st`],
+          ['paramTone2Delay', params.tone2Delay, 'valTone2Delay', `${Math.round(params.tone2Delay)} ms`],
+          ['paramTone2Mix', params.tone2Mix, 'valTone2Mix', `${Math.round(params.tone2Mix)}%`],
+          ['paramNoiseMix', params.noiseMix, 'valNoiseMix', `${Math.round(params.noiseMix)}%`],
+          ['paramNoiseDecay', params.noiseDecay, 'valNoiseDecay', `${Math.round(params.noiseDecay)} ms`],
+          ['paramAttack', params.attack, 'valAttack', `${Math.round(params.attack)} ms`],
+          ['paramDecay', params.decay, 'valDecay', `${Math.round(params.decay)} ms`],
+          ['paramSustain', params.sustain, 'valSustain', `${Math.round(params.sustain)}%`],
+          ['paramHold', params.hold, 'valHold', `${Math.round(params.hold)} ms`],
+          ['paramRelease', params.release, 'valRelease', `${Math.round(params.release)} ms`],
+          ['paramCutoff', freqToSlider(params.cutoff, 80, 18000), 'valCutoff', params.cutoff >= 1000 ? `${(params.cutoff / 1000).toFixed(1)} kHz` : `${Math.round(params.cutoff)} Hz`],
+          ['paramResonance', params.resonance, 'valResonance', Number(params.resonance).toFixed(1)],
+          ['paramReverbMix', params.reverbMix, 'valReverbMix', `${Math.round(params.reverbMix)}%`],
+          ['paramReverbDecay', params.reverbDecay, 'valReverbDecay', `${Number(params.reverbDecay).toFixed(2)} s`],
+          ['paramDelayMix', params.delayMix, 'valDelayMix', `${Math.round(params.delayMix)}%`],
+          ['paramDelayTime', params.delayTime, 'valDelayTime', `${Math.round(params.delayTime)} ms`],
+          ['paramDelayFeedback', params.delayFeedback, 'valDelayFeedback', `${Math.round(params.delayFeedback)}%`],
+          ['paramVolume', params.volume, 'valVolume', `${Math.round(params.volume)}%`]
+        ];
+
+        for (const [id, val, labelId, text] of map) {
+          const el = document.getElementById(id);
+          if (el) {
+            el.value = val;
+            setSliderFill(el);
+          }
+          const lbl = document.getElementById(labelId);
+          if (lbl) lbl.textContent = text;
+        }
+
+        drawAdsrCurve();
+        updateExportEstimates();
+      }
+
+      /* -----------------------------------------------------------------------
+         10. Responsive Canvas Drawing: ADSR Curve & Real-Time Oscilloscope
+         ----------------------------------------------------------------------- */
+      function resizeCanvasToDisplaySize(canvas) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const rect = canvas.getBoundingClientRect();
+        const w = Math.max(1, Math.round(rect.width * dpr));
+        const h = Math.max(1, Math.round(rect.height * dpr));
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+        return { w, h, dpr };
+      }
+
+      function drawAdsrCurve() {
+        const canvas = document.getElementById('adsrCanvas');
+        if (!canvas || canvas.offsetParent === null) return;
+        const { w, h, dpr } = resizeCanvasToDisplaySize(canvas);
+        const ctx = canvas.getContext('2d');
+        const styles = getComputedStyle(document.documentElement);
+        const accent = styles.getPropertyValue('--ios-accent').trim() || '#007AFF';
+        const gridColor = styles.getPropertyValue('--ios-scope-grid').trim() || 'rgba(128,128,128,0.1)';
+        const textColor = styles.getPropertyValue('--ios-text-tertiary').trim() || '#8E8E93';
+
+        ctx.clearRect(0, 0, w, h);
+
+        const padX = 14 * dpr;
+        const padTop = 12 * dpr;
+        const padBot = 16 * dpr;
+        const usableW = w - padX * 2;
+        const usableH = h - padTop - padBot;
+
+        // Baseline grid
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(padX, padTop + usableH);
+        ctx.lineTo(w - padX, padTop + usableH);
+        ctx.moveTo(padX, padTop + usableH * 0.5);
+        ctx.lineTo(w - padX, padTop + usableH * 0.5);
+        ctx.stroke();
+
+        const totalMs = Math.max(50, params.attack + params.decay + params.hold + params.release);
+        const x0 = padX;
+        const xA = x0 + (params.attack / totalMs) * usableW;
+        const xD = xA + (params.decay / totalMs) * usableW;
+        const xH = xD + (params.hold / totalMs) * usableW;
+        const xR = xH + (params.release / totalMs) * usableW;
+
+        const yZero = padTop + usableH;
+        const yPeak = padTop;
+        const ySus = yZero - (params.sustain / 100) * usableH;
+
+        // Area fill
+        const grad = ctx.createLinearGradient(0, padTop, 0, yZero);
+        grad.addColorStop(0, accent + '44');
+        grad.addColorStop(1, accent + '05');
+
+        ctx.beginPath();
+        ctx.moveTo(x0, yZero);
+        ctx.lineTo(xA, yPeak);
+        ctx.quadraticCurveTo(xA + (xD - xA) * 0.28, ySus + (yPeak - ySus) * 0.25, xD, ySus);
+        ctx.lineTo(xH, ySus);
+        ctx.quadraticCurveTo(xH + (xR - xH) * 0.3, yZero - (yZero - ySus) * 0.25, xR, yZero);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Stroke line
+        ctx.beginPath();
+        ctx.moveTo(x0, yZero);
+        ctx.lineTo(xA, yPeak);
+        ctx.quadraticCurveTo(xA + (xD - xA) * 0.28, ySus + (yPeak - ySus) * 0.25, xD, ySus);
+        ctx.lineTo(xH, ySus);
+        ctx.quadraticCurveTo(xH + (xR - xH) * 0.3, yZero - (yZero - ySus) * 0.25, xR, yZero);
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 2 * dpr;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        // Control node dots
+        ctx.fillStyle = accent;
+        [[xA, yPeak], [xD, ySus], [xH, ySus]].forEach(([px, py]) => {
+          ctx.beginPath();
+          ctx.arc(px, py, 3 * dpr, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Labels
+        ctx.fillStyle = textColor;
+        ctx.font = `${9.5 * dpr}px ui-monospace, monospace`;
+        ctx.fillText('A', x0 + 2 * dpr, h - 4 * dpr);
+        ctx.fillText('D', Math.min(w - 30 * dpr, xA + 4 * dpr), h - 4 * dpr);
+        ctx.fillText('R', Math.min(w - 18 * dpr, xH + 4 * dpr), h - 4 * dpr);
+      }
+
+      let peakHold = 0;
+      function drawScopeLoop() {
+        requestAnimationFrame(drawScopeLoop);
+        const canvas = document.getElementById('scopeCanvas');
+        if (!canvas || canvas.offsetParent === null) return;
+
+        const { w, h, dpr } = resizeCanvasToDisplaySize(canvas);
+        const ctx = canvas.getContext('2d');
+        const styles = getComputedStyle(document.documentElement);
+        const accent = styles.getPropertyValue('--ios-accent').trim() || '#007AFF';
+        const gridColor = styles.getPropertyValue('--ios-scope-grid').trim() || 'rgba(128,128,128,0.1)';
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw subtle studio grid
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        // Horizontal lines
+        for (let i = 1; i < 4; i++) {
+          const y = (h / 4) * i;
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+        }
+        // Vertical lines
+        for (let i = 1; i < 8; i++) {
+          const x = (w / 8) * i;
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+        }
+        ctx.stroke();
+
+        // Waveform drawing
+        const midY = h / 2;
+        ctx.beginPath();
+        ctx.lineWidth = 2.2 * dpr;
+        ctx.strokeStyle = accent;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        let framePeak = 0;
+
+        if (liveAnalyser && scopeData) {
+          liveAnalyser.getFloatTimeDomainData(scopeData);
+
+          // Find rising zero-crossing trigger point for stable waveform display
+          let triggerIdx = 0;
+          for (let i = 1; i < scopeData.length / 2; i++) {
+            if (scopeData[i - 1] <= 0 && scopeData[i] > 0.002) {
+              triggerIdx = i;
+              break;
+            }
+          }
+
+          const samplesToShow = Math.min(720, scopeData.length - triggerIdx);
+          for (let i = 0; i < samplesToShow; i++) {
+            const sample = scopeData[triggerIdx + i];
+            const abs = Math.abs(sample);
+            if (abs > framePeak) framePeak = abs;
+            const x = (i / (samplesToShow - 1)) * w;
+            const y = midY - sample * (h * 0.42);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+        } else {
+          ctx.moveTo(0, midY);
+          ctx.lineTo(w, midY);
+        }
+
+        ctx.stroke();
+
+        // Smooth peak readout decay
+        if (framePeak > peakHold) {
+          peakHold = framePeak;
+        } else {
+          peakHold *= 0.94;
+        }
+
+        const peakEl = document.getElementById('peakDbReadout');
+        if (peakHold < 0.001) {
+          peakEl.textContent = '-inf dB';
+        } else {
+          const db = Math.max(-60, 20 * Math.log10(peakHold));
+          peakEl.textContent = `${db.toFixed(1)} dB`;
+        }
+      }
+
+      /* -----------------------------------------------------------------------
+         11. Saved Patches Bank (LocalStorage Persistence)
+         ----------------------------------------------------------------------- */
+      const STORAGE_KEY = 'sfx_foley_lab_patches_v1';
+
+      function loadSavedPatches() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function savePatchesList(list) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        } catch {
+          showToast('Local storage quota exceeded', 'error');
+        }
+      }
+
+      function renderSavedPatches() {
+        const container = document.getElementById('savedPatchesList');
+        const list = loadSavedPatches();
+        if (!list.length) {
+          container.innerHTML = `<p class="py-4 text-xs text-center" style="color: var(--ios-text-tertiary);">No saved patches yet. Click "Save Current" to store your custom sound locally.</p>`;
+          return;
+        }
+
+        container.innerHTML = '';
+        list.forEach((item, idx) => {
+          const row = document.createElement('div');
+          row.className = 'py-2.5 flex items-center justify-between gap-3';
+
+          const leftBtn = document.createElement('button');
+          leftBtn.type = 'button';
+          leftBtn.className = 'flex-1 text-left group flex items-center gap-2.5 min-w-0';
+          leftBtn.innerHTML = `
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style="background-color: var(--ios-accent-soft); color: var(--ios-accent);">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+            </span>
+            <div class="min-w-0">
+              <div class="text-xs font-semibold truncate">${escapeHtml(item.name)}</div>
+              <div class="text-[10px] font-mono truncate" style="color: var(--ios-text-tertiary);">${escapeHtml(item.params.waveform)} / ${Math.round(item.params.freq)}Hz</div>
+            </div>
+          `;
+          leftBtn.addEventListener('click', () => {
+            activePresetId = null;
+            params = { ...DEFAULT_PARAMS, ...item.params, name: item.name };
+            syncUIFromParams();
+            updateExportFilename(item.name);
+            triggerPadVisual();
+            playSound(false);
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.setAttribute('aria-label', 'Delete patch');
+          delBtn.className = 'p-1.5 rounded-lg transition-colors hover:opacity-80';
+          delBtn.style.color = 'var(--ios-red)';
+          delBtn.innerHTML = `
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path><path d="M14 11v6"></path>
+            </svg>
+          `;
+          delBtn.addEventListener('click', () => {
+            const updated = loadSavedPatches();
+            updated.splice(idx, 1);
+            savePatchesList(updated);
+            renderSavedPatches();
+            showToast('Patch removed');
+          });
+
+          row.appendChild(leftBtn);
+          row.appendChild(delBtn);
+          container.appendChild(row);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      /* -----------------------------------------------------------------------
+         12. Toast Feedback & Trigger Pad Ripple
+         ----------------------------------------------------------------------- */
+      function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'px-4 py-2.5 rounded-2xl text-xs font-medium shadow-lg backdrop-blur-xl border transition-all duration-300 opacity-0 translate-y-2';
+        toast.style.backgroundColor = type === 'error' ? 'var(--ios-red)' : 'var(--ios-surface-solid)';
+        toast.style.color = type === 'error' ? '#FFFFFF' : 'var(--ios-text)';
+        toast.style.borderColor = 'var(--ios-border)';
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+          toast.classList.remove('opacity-0', 'translate-y-2');
+        });
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 2400);
+      }
+
+      function triggerPadVisual(clientX, clientY) {
+        const pad = document.getElementById('triggerPad');
+        pad.classList.add('is-triggered');
+        setTimeout(() => pad.classList.remove('is-triggered'), 90);
+
+        const rect = pad.getBoundingClientRect();
+        const x = typeof clientX === 'number' ? clientX - rect.left : rect.width / 2;
+        const y = typeof clientY === 'number' ? clientY - rect.top : rect.height / 2;
+
+        const ripple = document.createElement('span');
+        ripple.className = 'pad-ripple';
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        pad.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 460);
+      }
+
+      /* -----------------------------------------------------------------------
+         13. Event Wiring & Initialization
+         ----------------------------------------------------------------------- */
+      function initPresetsUI() {
+        const grid = document.getElementById('presetGrid');
+        grid.innerHTML = '';
+        PRESETS.forEach(preset => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.dataset.id = preset.id;
+          btn.className = 'preset-chip px-3 py-2.5 rounded-xl text-xs font-medium text-left truncate';
+          btn.textContent = preset.label;
+          btn.addEventListener('click', () => {
+            activePresetId = preset.id;
+            params = { ...DEFAULT_PARAMS, ...preset.p, name: preset.label };
+            syncUIFromParams();
+            updateExportFilename(preset.label);
+            triggerPadVisual();
+            playSound(false);
+          });
+          grid.appendChild(btn);
+        });
+      }
+
+      function bindSlider(id, onInput) {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => {
+          activePresetId = null;
+          params.name = 'Custom Sound';
+          onInput(parseFloat(el.value));
+          syncUIFromParams();
+        });
+        el.addEventListener('change', () => {
+          if (document.getElementById('optAutoAudition').checked) {
+            playSound(false);
+          }
+        });
+      }
+
+      function bindSegmented(containerId, onSelect) {
+        const container = document.getElementById(containerId);
+        container.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            onSelect(btn.dataset.value);
+          });
+        });
+      }
+
+      function initTheme() {
+        const savedTheme = localStorage.getItem('sfx_lab_theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+      }
+
+      function applyTheme(mode) {
+        const isDark = mode === 'dark';
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.classList.toggle('light', !isDark);
+        document.getElementById('iconSun').classList.toggle('hidden', !isDark);
+        document.getElementById('iconMoon').classList.toggle('hidden', isDark);
+        document.getElementById('themeLabel').textContent = isDark ? 'Dark' : 'Light';
+        try {
+          localStorage.setItem('sfx_lab_theme', mode);
+        } catch {}
+        requestAnimationFrame(drawAdsrCurve);
+      }
+
+      function initEvents() {
+        // Theme toggle
+        document.getElementById('themeToggleBtn').addEventListener('click', () => {
+          const isDark = document.documentElement.classList.contains('dark');
+          applyTheme(isDark ? 'light' : 'dark');
+        });
+
+        // Main View Tabs (Synthesizer vs Reference / Guide)
+        const tabSynthBtn = document.getElementById('tabSynthBtn');
+        const tabGuideBtn = document.getElementById('tabGuideBtn');
+        const synthView = document.getElementById('synthView');
+        const guideView = document.getElementById('guideView');
+
+        tabSynthBtn.addEventListener('click', () => {
+          tabSynthBtn.classList.add('active');
+          tabGuideBtn.classList.remove('active');
+          tabSynthBtn.setAttribute('aria-selected', 'true');
+          tabGuideBtn.setAttribute('aria-selected', 'false');
+          synthView.classList.remove('hidden');
+          guideView.classList.add('hidden');
+          requestAnimationFrame(drawAdsrCurve);
+        });
+
+        tabGuideBtn.addEventListener('click', () => {
+          tabGuideBtn.classList.add('active');
+          tabSynthBtn.classList.remove('active');
+          tabGuideBtn.setAttribute('aria-selected', 'true');
+          tabSynthBtn.setAttribute('aria-selected', 'false');
+          guideView.classList.remove('hidden');
+          synthView.classList.add('hidden');
+        });
+
+        // Trigger Pad (pointerdown for zero-latency rapid fire on touch & mouse)
+        const triggerPad = document.getElementById('triggerPad');
+        triggerPad.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          triggerPadVisual(e.clientX, e.clientY);
+          playSound(true);
+        });
+
+        // Keyboard Spacebar trigger
+        window.addEventListener('keydown', (e) => {
+          const tag = document.activeElement ? document.activeElement.tagName : '';
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+          if (e.code === 'Space' && !e.repeat && !synthView.classList.contains('hidden')) {
+            e.preventDefault();
+            triggerPadVisual();
+            playSound(true);
+          }
+        });
+
+        // 3x Rapid Burst Audition
+        document.getElementById('rapidTestBtn').addEventListener('click', () => {
+          [0, 140, 280].forEach(delay => {
+            setTimeout(() => {
+              triggerPadVisual();
+              playSound(true);
+            }, delay);
+          });
+        });
+
+        // Randomize & Init
+        document.getElementById('randomizeBtn').addEventListener('click', randomizePatch);
+        document.getElementById('resetInitBtn').addEventListener('click', () => {
+          activePresetId = 'ui-tap';
+          params = { ...DEFAULT_PARAMS };
+          syncUIFromParams();
+          updateExportFilename(params.name);
+          playSound(false);
+          showToast('Reset to initial patch');
+        });
+
+        // Save Patch
+        document.getElementById('savePatchBtn').addEventListener('click', () => {
+          const list = loadSavedPatches();
+          const nameInput = document.getElementById('exportFilename').value.trim();
+          const label = nameInput ? nameInput.replace(/^sfx-/, '') : `patch-${list.length + 1}`;
+          list.unshift({ name: label, params: { ...params }, savedAt: Date.now() });
+          if (list.length > 24) list.pop();
+          savePatchesList(list);
+          renderSavedPatches();
+          showToast(`Saved "${label}" to local bank`);
+        });
+
+        // Export Settings & Action
+        bindSegmented('exportChannelsSeg', (val) => {
+          exportChannels = parseInt(val, 10);
+          setSegmentedActive('exportChannelsSeg', val);
+          updateExportEstimates();
+        });
+        bindSegmented('exportRateSeg', (val) => {
+          exportSampleRate = parseInt(val, 10);
+          setSegmentedActive('exportRateSeg', val);
+          updateExportEstimates();
+        });
+        document.getElementById('exportWavBtn').addEventListener('click', exportWavFile);
+
+        // Synth Segmented Controls
+        bindSegmented('waveformSeg', (val) => {
+          activePresetId = null;
+          params.waveform = val;
+          syncUIFromParams();
+          if (document.getElementById('optAutoAudition').checked) playSound(false);
+        });
+        bindSegmented('noiseTypeSeg', (val) => {
+          activePresetId = null;
+          params.noiseType = val;
+          syncUIFromParams();
+          if (document.getElementById('optAutoAudition').checked) playSound(false);
+        });
+        bindSegmented('filterTypeSeg', (val) => {
+          activePresetId = null;
+          params.filterType = val;
+          syncUIFromParams();
+          if (document.getElementById('optAutoAudition').checked) playSound(false);
+        });
+
+        // Secondary Tone Toggle
+        document.getElementById('paramTone2Enabled').addEventListener('change', (e) => {
+          activePresetId = null;
+          params.tone2Enabled = e.target.checked;
+          syncUIFromParams();
+          if (document.getElementById('optAutoAudition').checked) playSound(false);
+        });
+
+        // Parameter Sliders
+        bindSlider('paramFreq', (v) => { params.freq = sliderToFreq(v, 40, 4000); });
+        bindSlider('paramPitchEnv', (v) => { params.pitchEnv = v; });
+        bindSlider('paramPitchTime', (v) => { params.pitchTime = v; });
+        bindSlider('paramLfoDepth', (v) => { params.lfoDepth = v; });
+        bindSlider('paramLfoRate', (v) => { params.lfoRate = v; });
+        bindSlider('paramTone2Interval', (v) => { params.tone2Interval = v; });
+        bindSlider('paramTone2Delay', (v) => { params.tone2Delay = v; });
+        bindSlider('paramTone2Mix', (v) => { params.tone2Mix = v; });
+        bindSlider('paramNoiseMix', (v) => { params.noiseMix = v; });
+        bindSlider('paramNoiseDecay', (v) => { params.noiseDecay = v; });
+        bindSlider('paramAttack', (v) => { params.attack = v; });
+        bindSlider('paramDecay', (v) => { params.decay = v; });
+        bindSlider('paramSustain', (v) => { params.sustain = v; });
+        bindSlider('paramHold', (v) => { params.hold = v; });
+        bindSlider('paramRelease', (v) => { params.release = v; });
+        bindSlider('paramCutoff', (v) => { params.cutoff = sliderToFreq(v, 80, 18000); });
+        bindSlider('paramResonance', (v) => { params.resonance = v; });
+        bindSlider('paramReverbMix', (v) => { params.reverbMix = v; });
+        bindSlider('paramReverbDecay', (v) => { params.reverbDecay = v; });
+        bindSlider('paramDelayMix', (v) => { params.delayMix = v; });
+        bindSlider('paramDelayTime', (v) => { params.delayTime = v; });
+        bindSlider('paramDelayFeedback', (v) => { params.delayFeedback = v; });
+        bindSlider('paramVolume', (v) => { params.volume = v; });
+
+        // Redraw canvases cleanly on window resize
+        window.addEventListener('resize', () => {
+          drawAdsrCurve();
+        });
+      }
+
+      // Boot sequence
+      window.addEventListener('DOMContentLoaded', () => {
+        initTheme();
+        initPresetsUI();
+        initEvents();
+        renderSavedPatches();
+        syncUIFromParams();
+        drawScopeLoop();
+      });
+    })();
+  </script>
+</body>
+</html>
