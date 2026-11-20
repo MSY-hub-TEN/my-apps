@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:," />
+    <title>TENタウン 街ランチャー</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: #17101f;
+        color: #f3e6cf;
+        font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      button { min-height: 2.25rem; font-family: inherit; cursor: pointer; }
+
+      #stage {
+        width: min(100vw, calc(100dvh * 960 / 544), 1100px);
+        margin: 0 auto;
+        position: relative;
+      }
+      #game {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 960 / 544;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        background: #2a1836;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #hint {
+        width: min(100vw, calc(100dvh * 960 / 544), 1100px);
+        padding: 0.45rem 0.8rem 0.7rem;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        color: #cdb894;
+        text-align: center;
+      }
+      #hint b { color: #ffd98a; font-weight: 700; }
+      #status {
+        display: block;
+        min-height: 1.2em;
+        color: #a98fc0;
+        font-size: 0.75rem;
+      }
+
+      /* 入店プロンプト */
+      #enterBtn {
+        position: absolute;
+        left: 50%;
+        bottom: 12px;
+        transform: translateX(-50%);
+        display: none;
+        align-items: center;
+        gap: 0.45rem;
+        background: #ffb52e;
+        color: #2a1602;
+        border: 3px solid #fff3d6;
+        border-radius: 10px;
+        padding: 0.55rem 1.1rem;
+        font-size: 1rem;
+        font-weight: 800;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.45);
+        z-index: 5;
+        min-height: 3rem;
+      }
+      #enterBtn:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.45); }
+      #enterBtn.show { display: inline-flex; }
+
+      /* フェード */
+      #fade {
+        position: fixed; inset: 0;
+        background: #06030c;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.38s ease;
+        z-index: 40;
+      }
+      #fade.on { opacity: 1; pointer-events: auto; }
+
+      /* 店内ビュー */
+      #shopView {
+        position: fixed; inset: 0;
+        display: none;
+        flex-direction: column;
+        background: #100a18;
+        z-index: 30;
+      }
+      #shopView.open { display: flex; }
+      .shopbar {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.5rem 0.7rem;
+        background: #241631;
+        border-bottom: 2px solid #4a3062;
+      }
+      #backBtn {
+        background: #ffb52e;
+        color: #2a1602;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 0.95rem;
+        font-size: 0.95rem;
+        font-weight: 800;
+        min-height: 2.75rem;
+      }
+      #shopTitle {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #ffe9bd;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #openExt {
+        margin-left: auto;
+        color: #cdb8ec;
+        font-size: 0.82rem;
+        padding: 0.6rem 0.4rem;
+        white-space: nowrap;
+      }
+      #guidePanel {
+        flex: 0 0 auto;
+        display: none;
+        padding: 0.7rem 0.9rem;
+        background: #1d1129;
+        border-bottom: 2px solid #4a3062;
+        max-height: 38dvh;
+        overflow-y: auto;
+      }
+      #guidePanel.show { display: block; }
+      #guidePanel h2 { margin: 0 0 0.45rem; font-size: 0.92rem; color: #ffd98a; }
+      #guidePanel p { margin: 0 0 0.5rem; font-size: 0.82rem; color: #cdb894; }
+      .newAppBtn {
+        display: inline-block;
+        margin: 0 0.4rem 0.45rem 0;
+        background: #37224d;
+        color: #ffe9bd;
+        border: 2px solid #6a4d8f;
+        border-radius: 8px;
+        padding: 0.5rem 0.8rem;
+        font-size: 0.88rem;
+        font-weight: 700;
+        min-height: 2.75rem;
+      }
+      #shopFrame {
+        flex: 1 1 auto;
+        width: 100%;
+        border: none;
+        background: #fff;
+      }
+      @media (max-width: 560px) {
+        #hint { font-size: 0.72rem; }
+        #shopTitle { font-size: 0.88rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <canvas id="game" width="960" height="544" aria-label="TENタウンの街マップ。タップまたは矢印キーで黒猫を移動できます。"></canvas>
+      <button id="enterBtn" type="button">🚪 入る</button>
+    </div>
+    <div id="hint">
+      <b>PC</b>：矢印キー / WASD で移動 ・ Enter で入店　｜　<b>スマホ</b>：タップした場所まで歩く ・ ドア前で「入る」
+      <span id="status"></span>
+    </div>
+
+    <div id="shopView" role="dialog" aria-modal="true">
+      <div class="shopbar">
+        <button id="backBtn" type="button">← 街に戻る</button>
+        <span id="shopTitle"></span>
+        <a id="openExt" href="#" target="_blank" rel="noopener">別タブで開く ↗</a>
+      </div>
+      <div id="guidePanel"></div>
+      <iframe id="shopFrame" title="アプリ画面"></iframe>
+    </div>
+    <div id="fade"></div>
+
+    <script>
+    'use strict';
+    /* ============================================================
+       TENタウン 街ランチャー
+       夕方の商店街を歩くちび黒猫TEN。建物＝自作HTMLアプリ。
+       ============================================================ */
+    var PAGES = 'https://msy-hub-ten.github.io/my-apps/';
+    var API = 'https://api.github.com/repos/MSY-hub-TEN/my-apps/contents/?ref=main';
+
+    function appURL(file) { return PAGES + encodeURIComponent(file); }
+    function displayName(file) {
+      return file.replace(/\.html$/i, '').replace(/_+/g, ' ').trim();
+    }
+
+    /* ---------- 既知の建物（アプリ） ---------- */
+    var KNOWN = [
+      { shop: '音楽屋',     name: 'SoundOS',              file: 'SoundOS_-_Apple風_環境音_ノイズミキサー.html',                              style: 'music'  },
+      { shop: 'レコード屋', name: 'SoundOS Pro',          file: 'SoundOS_Pro_v2.html',                                                              style: 'record' },
+      { shop: 'ライブハウス', name: 'JAMIROQUAI',         file: 'jamiroquai-model.html',                                                            style: 'live'   },
+      { shop: '変換工場',   name: 'AETHER FORGE',         file: 'AETHER_FORGE_-_スチームパンク拡張子変換工場.html',                                  style: 'forge'  },
+      { shop: 'アトリエ',   name: 'DESIGN ASSET STUDIO',  file: 'DESIGN_ASSET_STUDIO_-_ビジュアル_デザイン素材工房.html',                             style: 'atelier'},
+      { shop: 'ドット絵工房', name: 'Pixel Sprite Factory', file: 'Pixel_Sprite_Factory_-_画像_ドット絵_モーション差分ジェネレーター.html',           style: 'pixel'  },
+      { shop: '研究所',     name: 'SFX & FOLEY LAB',      file: 'SFX___FOLEY_LAB_-_単発効果音_UIクリック音シンセサイザー.html',                       style: 'lab'    },
+      { shop: '案内所',     name: 'みんなの広場ランチャー', file: 'index.html',                                                                     style: 'guide'  }
+    ];
+    var KNOWN_FILES = {};
+    KNOWN.forEach(function (k) { KNOWN_FILES[k.file] = true; });
+    /* この街自身が repo に置かれた場合の除外リスト */
+    var SELF_NAMES = ['ten-town.html', 'tentown.html', 'ten_town.html', 'TENタウン.html', '街ランチャー.html'];
+    function isSelfFile(name) {
+      var n = name.toLowerCase();
+      if (SELF_NAMES.indexOf(name) >= 0 || SELF_NAMES.indexOf(n) >= 0) return true;
+      return n.indexOf('town') >= 0 || name.indexOf('タウン') >= 0;
+    }
+
+    /* ---------- 建物スロット（区画） ---------- */
+    /* x, w, baseY（建物の底辺）, wallH（壁の高さ）, roofH（屋根の高さ） */
+    var SLOTS_KNOWN = [
+      { x: 24,  w: 140, baseY: 246, wallH: 62, roofH: 30 },  /* 音楽屋 */
+      { x: 186, w: 140, baseY: 246, wallH: 62, roofH: 30 },  /* レコード屋 */
+      { x: 598, w: 150, baseY: 246, wallH: 66, roofH: 32 },  /* ライブハウス */
+      { x: 770, w: 150, baseY: 246, wallH: 66, roofH: 26 },  /* 変換工場 */
+      { x: 24,  w: 150, baseY: 478, wallH: 60, roofH: 28 },  /* アトリエ */
+      { x: 786, w: 150, baseY: 478, wallH: 60, roofH: 28 },  /* 研究所 */
+      { x: 196, w: 150, baseY: 516, wallH: 54, roofH: 24 },  /* ドット絵工房 */
+      { x: 614, w: 130, baseY: 516, wallH: 54, roofH: 24 }   /* 案内所 */
+    ];
+    var SLOTS_RESERVE = [
+      { x: 348, w: 102, baseY: 246, wallH: 56, roofH: 26 },
+      { x: 462, w: 102, baseY: 246, wallH: 56, roofH: 26 },
+      { x: 24,  w: 140, baseY: 516, wallH: 54, roofH: 24 },
+      { x: 380, w: 140, baseY: 516, wallH: 54, roofH: 24 }
+    ];
+    var GENERIC_PALETTES = [
+      { wall: '#cbb59a', roof: '#7a4a8c', trim: '#8a6a4a' },
+      { wall: '#a8bfb0', roof: '#8c4a3a', trim: '#5d7268' },
+      { wall: '#d9c27a', roof: '#4a6a8c', trim: '#8a744a' },
+      { wall: '#bfa3c7', roof: '#5d7a4a', trim: '#7a5d8c' }
+    ];
+    var STYLE_PALETTES = {
+      music:   { wall: '#e8d9b0', roof: '#2e7a7a', trim: '#a8843c' },
+      record:  { wall: '#4a4055', roof: '#26202e', trim: '#c7a23c' },
+      live:    { wall: '#7a3b34', roof: '#33202b', trim: '#ffb52e' },
+      forge:   { wall: '#8a5a3c', roof: '#4a3a30', trim: '#c77b3c' },
+      atelier: { wall: '#efe6da', roof: '#b0563a', trim: '#7a8c5d' },
+      pixel:   { wall: '#5d6a8c', roof: '#2e3a5d', trim: '#ffd98a' },
+      lab:     { wall: '#cfd6cf', roof: '#5d7a8c', trim: '#8c2e3c' },
+      guide:   { wall: '#e3cfa3', roof: '#8c5a2e', trim: '#5d7a4a' }
+    };
+
+    var buildings = [];
+    KNOWN.forEach(function (k, i) {
+      var s = SLOTS_KNOWN[i];
+      buildings.push({
+        shop: k.shop, name: k.name, file: k.file, style: k.style,
+        x: s.x, w: s.w, baseY: s.baseY, wallH: s.wallH, roofH: s.roofH,
+        pal: STYLE_PALETTES[k.style],
+        doorX: s.x + s.w / 2, seed: i * 37 + 11
+      });
+    });
+
+    var overflowApps = [];   /* 区画に収まらなかった新着（案内所で案内） */
+    var detectedNew = [];    /* 検出した未知アプリ全部 */
+
+    /* ---------- ワールド / 衝突 ---------- */
+    var W = 960, H = 544, TILE = 16, COLS = 60, ROWS = 34;
+    var FOUNTAIN = { x: 480, y: 364, r: 36 };
+    var LAMPS = [
+      { x: 352, y: 302 }, { x: 608, y: 302 },
+      { x: 352, y: 430 }, { x: 608, y: 430 },
+      { x: 540, y: 470 }
+    ];
+    var TREES = [ { x: 200, y: 330 }, { x: 756, y: 330 } ];
+
+    var _blockCache = null;
+    function invalidateBlockers() { _blockCache = null; }
+    function blockers() {
+      if (_blockCache) return _blockCache;
+      var list = buildings.map(function (b) {
+        return { x: b.x + 2, y: b.baseY - b.wallH - 4, w: b.w - 4, h: b.wallH + 4 };
+      });
+      LAMPS.forEach(function (l) { list.push({ x: l.x - 4, y: l.y - 6, w: 8, h: 8 }); });
+      TREES.forEach(function (t) { list.push({ x: t.x - 5, y: t.y - 8, w: 10, h: 10 }); });
+      list.push({ x: 516, y: 436, w: 14, h: 16 }); /* 入口の町名看板 */
+      _blockCache = list;
+      return list;
+    }
+    function walkablePoint(x, y) {
+      if (x < 12 || x > W - 12 || y < 98 || y > H - 8) return false;
+      var bl = blockers();
+      for (var i = 0; i < bl.length; i++) {
+        var r = bl[i];
+        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return false;
+      }
+      var dx = x - FOUNTAIN.x, dy = y - FOUNTAIN.y;
+      if (dx * dx + dy * dy < (FOUNTAIN.r + 8) * (FOUNTAIN.r + 8)) return false;
+      return true;
+    }
+    function cellWalkable(cx, cy) {
+      if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return false;
+      return walkablePoint(cx * TILE + TILE / 2, cy * TILE + TILE / 2);
+    }
+    function nearestWalkableCell(cx, cy) {
+      if (cellWalkable(cx, cy)) return { cx: cx, cy: cy };
+      for (var rad = 1; rad < 12; rad++) {
+        for (var dy = -rad; dy <= rad; dy++) {
+          for (var dx = -rad; dx <= rad; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
+            if (cellWalkable(cx + dx, cy + dy)) return { cx: cx + dx, cy: cy + dy };
+          }
+        }
+      }
+      return null;
+    }
+    /* BFS 経路探索 */
+    function findPath(sx, sy, tx, ty) {
+      var start = nearestWalkableCell(Math.floor(sx / TILE), Math.floor(sy / TILE));
+      var goal = nearestWalkableCell(Math.floor(tx / TILE), Math.floor(ty / TILE));
+      if (!start || !goal) return null;
+      if (start.cx === goal.cx && start.cy === goal.cy) return [];
+      var key = function (x, y) { return y * COLS + x; };
+      var prev = {}, seen = {};
+      var q = [start];
+      seen[key(start.cx, start.cy)] = true;
+      var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      while (q.length) {
+        var cur = q.shift();
+        if (cur.cx === goal.cx && cur.cy === goal.cy) break;
+        for (var i = 0; i < 4; i++) {
+          var nx = cur.cx + dirs[i][0], ny = cur.cy + dirs[i][1];
+          if (!cellWalkable(nx, ny) || seen[key(nx, ny)]) continue;
+          seen[key(nx, ny)] = true;
+          prev[key(nx, ny)] = cur;
+          q.push({ cx: nx, cy: ny });
+        }
+      }
+      if (!seen[key(goal.cx, goal.cy)]) return null;
+      var path = [], node = goal;
+      while (!(node.cx === start.cx && node.cy === start.cy)) {
+        path.unshift({ x: node.cx * TILE + TILE / 2, y: node.cy * TILE + TILE / 2 });
+        node = prev[key(node.cx, node.cy)];
+        if (!node) return null;
+      }
+      return path;
+    }
+    </script>
+    <script>
+    'use strict';
+    /* ============================================================
+       黒猫TEN スプライト（ピクセルマップ定義）
+       K=体毛(黒) k=影色 E=琥珀の目 P=ピンク(耳の内側・鼻)
+       ============================================================ */
+    var CAT_COLORS = { K: '#171221', k: '#3a2c58', E: '#ffb52e', P: '#ef8fa5' };
+    function variant(base, changes) {
+      var a = base.slice();
+      for (var k in changes) a[+k] = changes[k];
+      return a;
+    }
+    var CAT_DOWN_STAND = [
+      '................',
+      '.KK..........KK.',
+      '.KPK........KPK.',
+      '.KKKK......KKKK.',
+      '..KKKKKKKKKKKK..',
+      '.KKKKKKKKKKKKKK.',
+      '.KEEKKKKKKEEKK..',
+      '.KKKKKKKKKKKKK..',
+      '...KKKKPPKKKK...',
+      '....KKKKKKKK....',
+      '...KKKKKKKKKK...',
+      '..KKKKKKKKKKKK..',
+      '..KKKKKKKKKKKKK.',
+      '..KKKKKKKKKKKKKK',
+      '...KKK....KKK.K.',
+      '...KKK....KKK...',
+      '..KKKK....KKKK..',
+      '................'
+    ];
+    var CAT_DOWN_WALK_A = variant(CAT_DOWN_STAND, {
+      12: '.KKKKKKKKKKKKK..',
+      13: 'KKKKKKKKKKKKKK..',
+      14: '.K.KKK....KKK...',
+      15: '..KKK......KK...',
+      16: '..KKKK.....KK...'
+    });
+    var CAT_DOWN_WALK_B = variant(CAT_DOWN_STAND, {
+      15: '...KK......KKK..',
+      16: '...KK.....KKKK..'
+    });
+    var BACK_SHADE = {
+      6: '.KKKKkkkkKKKKK..',
+      7: '.KKKKkkkkKKKKK..',
+      8: '...KKKkkkkKKK...',
+      9: '....KKkkkkKK....'
+    };
+    var CAT_UP_STAND = variant(CAT_DOWN_STAND, BACK_SHADE);
+    var CAT_UP_WALK_A = variant(CAT_DOWN_WALK_A, BACK_SHADE);
+    var CAT_UP_WALK_B = variant(CAT_DOWN_WALK_B, BACK_SHADE);
+    var CAT_RIGHT_STAND = [
+      '................',
+      '.....KK..KKK....',
+      '.....KPK.KKK....',
+      '.....KKKKKKK....',
+      '....KKKKKKKKK...',
+      '..K.KKKKKKKKEK..',
+      '..K.KKKKKKKKKKK.',
+      '..K.KKKKKKKKKP..',
+      '..K..KKKKKKKK...',
+      '..K..KKKKKKKK...',
+      '..K.KKKKKKKKKK..',
+      '...KKKKKKKKKK...',
+      '....KKKKKKKK....',
+      '....KK....KK....',
+      '....KK....KK....',
+      '....KK....KK....',
+      '...KKKK...KKKK..',
+      '................'
+    ];
+    var CAT_RIGHT_WALK_A = variant(CAT_RIGHT_STAND, {
+      4: '..K.KKKKKKKKK...',
+      13: '...KK......KK...',
+      14: '...KK.......KK..',
+      15: '..KK.........KK.',
+      16: '..KKK........KKK'
+    });
+    var CAT_RIGHT_WALK_B = variant(CAT_RIGHT_STAND, {
+      5: '....KKKKKKKKEK..',
+      6: '....KKKKKKKKKKK.',
+      7: '....KKKKKKKKKP..',
+      8: '..K..KKKKKKKK...',
+      13: '.....KK...KK....',
+      14: '......KK..KK....',
+      15: '....KK......KK..',
+      16: '....KKK....KKK..'
+    });
+
+    function makeSprite(map) {
+      var c = document.createElement('canvas');
+      c.width = 16; c.height = 18;
+      var g = c.getContext('2d');
+      for (var y = 0; y < map.length; y++) {
+        var row = map[y];
+        for (var x = 0; x < row.length; x++) {
+          var col = CAT_COLORS[row[x]];
+          if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+        }
+      }
+      var big = document.createElement('canvas');
+      big.width = 32; big.height = 36;
+      var bg = big.getContext('2d');
+      bg.imageSmoothingEnabled = false;
+      bg.drawImage(c, 0, 0, 32, 36);
+      return big;
+    }
+    function flipSprite(src) {
+      var c = document.createElement('canvas');
+      c.width = src.width; c.height = src.height;
+      var g = c.getContext('2d');
+      g.translate(src.width, 0); g.scale(-1, 1);
+      g.drawImage(src, 0, 0);
+      return c;
+    }
+    var SPRITES = {
+      down:  [makeSprite(CAT_DOWN_STAND),  makeSprite(CAT_DOWN_WALK_A),  makeSprite(CAT_DOWN_WALK_B)],
+      up:    [makeSprite(CAT_UP_STAND),    makeSprite(CAT_UP_WALK_A),    makeSprite(CAT_UP_WALK_B)],
+      right: [makeSprite(CAT_RIGHT_STAND), makeSprite(CAT_RIGHT_WALK_A), makeSprite(CAT_RIGHT_WALK_B)],
+      left:  []
+    };
+    SPRITES.left = SPRITES.right.map(flipSprite);
+
+    /* ---------- 猫の状態 ---------- */
+    var cat = { x: 567, y: 500, dir: 'up', moving: false, walkTime: 0, path: [] };
+    var SPEED = 138;
+
+    /* ---------- 入力 ---------- */
+    var keys = {};
+    var shopOpen = false;
+    window.addEventListener('keydown', function (e) {
+      var k = e.key.toLowerCase();
+      if (shopOpen) {
+        if (e.key === 'Escape') closeShop();
+        return;
+      }
+      if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].indexOf(k) >= 0) e.preventDefault();
+      if (e.key === 'Enter') { if (nearBuilding) { openShop(nearBuilding); } return; }
+      keys[k] = true;
+      if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].indexOf(k) >= 0) cat.path = [];
+    });
+    window.addEventListener('keyup', function (e) { keys[e.key.toLowerCase()] = false; });
+
+    var canvas = document.getElementById('game');
+    canvas.addEventListener('pointerdown', function (e) {
+      if (shopOpen) return;
+      var rect = canvas.getBoundingClientRect();
+      var wx = (e.clientX - rect.left) / rect.width * W;
+      var wy = (e.clientY - rect.top) / rect.height * H;
+      /* 建物をタップ → そのドア前へ */
+      for (var i = 0; i < buildings.length; i++) {
+        var b = buildings[i];
+        var top = b.baseY - b.wallH - b.roofH;
+        if (wx >= b.x - 4 && wx <= b.x + b.w + 4 && wy >= top && wy <= b.baseY + 14) {
+          goTo(b.doorX, b.baseY + 13);
+          return;
+        }
+      }
+      goTo(wx, wy);
+    });
+    function goTo(wx, wy) {
+      var p = findPath(cat.x, cat.y, wx, wy);
+      if (p !== null) cat.path = p;
+    }
+
+    /* ---------- 移動更新 ---------- */
+    function updateCat(dt) {
+      var mx = 0, my = 0;
+      if (keys['arrowleft'] || keys['a']) mx -= 1;
+      if (keys['arrowright'] || keys['d']) mx += 1;
+      if (keys['arrowup'] || keys['w']) my -= 1;
+      if (keys['arrowdown'] || keys['s']) my += 1;
+      if (mx !== 0 || my !== 0) {
+        cat.path = [];
+        var len = Math.sqrt(mx * mx + my * my);
+        mx /= len; my /= len;
+        var nx = cat.x + mx * SPEED * dt;
+        var ny = cat.y + my * SPEED * dt;
+        if (walkablePoint(nx, cat.y)) cat.x = nx;
+        if (walkablePoint(cat.x, ny)) cat.y = ny;
+        cat.dir = Math.abs(mx) > Math.abs(my) ? (mx > 0 ? 'right' : 'left') : (my > 0 ? 'down' : 'up');
+        cat.moving = true;
+      } else if (cat.path.length) {
+        var wp = cat.path[0];
+        var dx = wp.x - cat.x, dy = wp.y - cat.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var step = SPEED * dt;
+        if (dist <= step) {
+          cat.x = wp.x; cat.y = wp.y; cat.path.shift();
+        } else {
+          cat.x += dx / dist * step;
+          cat.y += dy / dist * step;
+        }
+        cat.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+        cat.moving = true;
+      } else {
+        cat.moving = false;
+      }
+      if (cat.moving) cat.walkTime += dt; else cat.walkTime = 0;
+    }
+
+    /* ---------- ドア前プロンプト ---------- */
+    var nearBuilding = null;
+    var enterBtn = document.getElementById('enterBtn');
+    function updatePrompt() {
+      nearBuilding = null;
+      for (var i = 0; i < buildings.length; i++) {
+        var b = buildings[i];
+        if (Math.abs(cat.x - b.doorX) < 32 && cat.y > b.baseY - 8 && cat.y < b.baseY + 32) {
+          nearBuilding = b; break;
+        }
+      }
+      if (nearBuilding && !shopOpen) {
+        enterBtn.textContent = '🚪 ' + nearBuilding.shop + '「' + nearBuilding.name + '」に入る';
+        enterBtn.classList.add('show');
+      } else {
+        enterBtn.classList.remove('show');
+      }
+    }
+    enterBtn.addEventListener('click', function () { if (nearBuilding) openShop(nearBuilding); });
+
+    /* ---------- 入店 / 帰還 ---------- */
+    var shopView = document.getElementById('shopView');
+    var shopFrame = document.getElementById('shopFrame');
+    var shopTitle = document.getElementById('shopTitle');
+    var openExt = document.getElementById('openExt');
+    var guidePanel = document.getElementById('guidePanel');
+    var fade = document.getElementById('fade');
+    var currentShop = null;
+
+    function openShop(b) {
+      if (shopOpen) return;
+      currentShop = b;
+      cat.path = [];
+      fade.classList.add('on');
+      setTimeout(function () {
+        shopOpen = true;
+        shopView.classList.add('open');
+        enterBtn.classList.remove('show');
+        shopTitle.textContent = b.shop + '｜' + b.name;
+        var url = appURL(b.file);
+        openExt.href = url;
+        buildGuidePanel(b);
+        shopFrame.src = url;
+        fade.classList.remove('on');
+      }, 400);
+    }
+    function buildGuidePanel(b) {
+      guidePanel.innerHTML = '';
+      guidePanel.classList.remove('show');
+      if (b.style !== 'guide') return;
+      if (!overflowApps.length && !detectedNew.length) return;
+      var h = document.createElement('h2');
+      h.textContent = '新しく見つけたアプリ';
+      guidePanel.appendChild(h);
+      if (overflowApps.length) {
+        var p = document.createElement('p');
+        p.textContent = '街の区画がいっぱいで家が建てられなかった新着アプリです。ここから開けます。';
+        guidePanel.appendChild(p);
+        overflowApps.forEach(function (f) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'newAppBtn';
+          btn.textContent = displayName(f);
+          btn.addEventListener('click', function () {
+            var url = appURL(f);
+            shopFrame.src = url;
+            openExt.href = url;
+            shopTitle.textContent = '案内所｜' + displayName(f);
+          });
+          guidePanel.appendChild(btn);
+        });
+      } else {
+        var p2 = document.createElement('p');
+        p2.textContent = '新しいアプリはすべて街に家が建ちました。';
+        guidePanel.appendChild(p2);
+      }
+      guidePanel.classList.add('show');
+    }
+    function closeShop() {
+      if (!shopOpen) return;
+      fade.classList.add('on');
+      setTimeout(function () {
+        shopOpen = false;
+        shopView.classList.remove('open');
+        shopFrame.src = 'about:blank';
+        currentShop = null;
+        fade.classList.remove('on');
+      }, 400);
+    }
+    document.getElementById('backBtn').addEventListener('click', closeShop);
+
+    /* ---------- GitHub 自動検出（新しい .html → 汎用の家） ---------- */
+    var statusEl = document.getElementById('status');
+    fetch(API)
+      .then(function (r) { if (!r.ok) throw new Error('api'); return r.json(); })
+      .then(function (list) {
+        var files = list.filter(function (f) {
+          return f.type === 'file' && /\.html$/i.test(f.name);
+        }).map(function (f) { return f.name; });
+        var unknown = files.filter(function (n) {
+          return !KNOWN_FILES[n] && !isSelfFile(n);
+        }).sort();
+        detectedNew = unknown;
+        var built = 0;
+        unknown.forEach(function (n, i) {
+          if (i < SLOTS_RESERVE.length) {
+            var s = SLOTS_RESERVE[i];
+            buildings.push({
+              shop: '新しい家', name: displayName(n), file: n, style: 'generic',
+              x: s.x, w: s.w, baseY: s.baseY, wallH: s.wallH, roofH: s.roofH,
+              pal: GENERIC_PALETTES[i % GENERIC_PALETTES.length],
+              doorX: s.x + s.w / 2, seed: 61 + i * 17
+            });
+            built++;
+          } else {
+            overflowApps.push(n);
+          }
+        });
+        if (built) {
+          invalidateBlockers();
+          statusEl.textContent = 'GitHubで新しいアプリが見つかり、家が ' + built + ' 軒建ちました。';
+        }
+      })
+      .catch(function () { /* API失敗時：既知の建物だけで街は成立させる */ });
+    </script>
+    <script>
+    'use strict';
+    /* ============================================================
+       描画（コード描画ドット絵 / Yソートで奥行き表現）
+       ============================================================ */
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    var CLOUDS = [
+      { x: 60, y: 24, s: 1.1 }, { x: 400, y: 12, s: 0.7 },
+      { x: 690, y: 32, s: 1.3 }, { x: 230, y: 44, s: 0.55 }
+    ];
+    function lcg(seed) {
+      var s = seed;
+      return function () { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+    }
+
+    function drawSky(t) {
+      var bands = [[32, '#221138'], [52, '#3a1c50'], [68, '#5d2a5e'], [82, '#8c3d5a'], [93, '#c65a3a'], [104, '#e08a4a']];
+      var prev = 0;
+      bands.forEach(function (b) {
+        ctx.fillStyle = b[1];
+        ctx.fillRect(0, prev, W, b[0] - prev);
+        prev = b[0];
+      });
+      /* 星 */
+      var rnd = lcg(777);
+      ctx.fillStyle = 'rgba(255,240,210,0.7)';
+      for (var i = 0; i < 26; i++) {
+        var sx = Math.floor(rnd() * W), sy = Math.floor(rnd() * 34);
+        if ((Math.floor(t * 1.5) + i) % 5 !== 0) ctx.fillRect(sx, sy, 2, 2);
+      }
+      /* 沈む太陽（地面で下半分が隠れる） */
+      for (var dy = -15; dy <= 15; dy += 3) {
+        var halfW = Math.sqrt(225 - dy * dy) * 0.95;
+        ctx.fillStyle = dy < -3 ? '#ffcf6e' : '#ffb52e';
+        ctx.fillRect(Math.round(150 - halfW), 82 + dy, Math.round(halfW * 2), 3);
+      }
+      /* 雲 */
+      CLOUDS.forEach(function (c) {
+        var cx = ((c.x + t * 6 * c.s) % (W + 240)) - 120;
+        ctx.fillStyle = '#2b1745';
+        ctx.fillRect(Math.round(cx), c.y, Math.round(92 * c.s), 10);
+        ctx.fillRect(Math.round(cx + 14 * c.s), c.y - 7, Math.round(54 * c.s), 7);
+        ctx.fillStyle = '#3a2158';
+        ctx.fillRect(Math.round(cx + 10 * c.s), c.y + 10, Math.round(70 * c.s), 4);
+      });
+    }
+
+    function drawGround(t) {
+      ctx.fillStyle = '#54402f';
+      ctx.fillRect(0, 92, W, 62);                    /* 建物の裏通り */
+      ctx.fillStyle = '#6e4f38';
+      ctx.fillRect(0, 154, W, H - 154);              /* 地面 */
+      var rnd = lcg(4242);
+      for (var i = 0; i < 260; i++) {
+        var gx = Math.floor(rnd() * W), gy = 158 + Math.floor(rnd() * (H - 166));
+        ctx.fillStyle = i % 3 ? 'rgba(0,0,0,0.10)' : 'rgba(255,220,170,0.05)';
+        ctx.fillRect(gx, gy, 3, 3);
+      }
+      /* 北側の通りの路面 */
+      ctx.fillStyle = '#5d4030';
+      ctx.fillRect(0, 246, W, 48);
+      ctx.fillStyle = 'rgba(199,162,60,0.45)';
+      for (var dx = 8; dx < W; dx += 48) ctx.fillRect(dx, 268, 18, 3);
+      /* 広場 */
+      ctx.fillStyle = '#8a6a4c';
+      ctx.fillRect(332, 292, 296, 146);
+      ctx.fillStyle = '#a8845c';
+      ctx.fillRect(332, 292, 296, 4); ctx.fillRect(332, 434, 296, 4);
+      ctx.fillRect(332, 292, 4, 146); ctx.fillRect(624, 292, 4, 146);
+      var rnd2 = lcg(99);
+      ctx.fillStyle = 'rgba(255,235,200,0.07)';
+      for (var j = 0; j < 60; j++) {
+        ctx.fillRect(340 + Math.floor(rnd2() * 280), 300 + Math.floor(rnd2() * 130), 4, 3);
+      }
+      /* 入口の小道 */
+      ctx.fillStyle = '#8a6a4c';
+      ctx.fillRect(536, 438, 64, H - 438);
+      ctx.fillStyle = '#a8845c';
+      ctx.fillRect(536, 438, 4, H - 438); ctx.fillRect(596, 438, 4, H - 438);
+      /* 各建物のドア前エプロン */
+      ctx.fillStyle = '#7d5f45';
+      buildings.forEach(function (b) { ctx.fillRect(b.x - 2, b.baseY, b.w + 4, 10); });
+      /* 花のドット */
+      var rnd3 = lcg(2026);
+      var flowerCols = ['#e86a8a', '#ffd98a', '#e07a4a', '#c77ab0'];
+      for (var f = 0; f < 54; f++) {
+        var fx = 8 + Math.floor(rnd3() * (W - 16));
+        var fy = (f % 2 ? 424 + Math.floor(rnd3() * 10) : 250 + Math.floor(rnd3() * 10));
+        ctx.fillStyle = flowerCols[f % 4];
+        ctx.fillRect(fx, fy, 3, 3);
+      }
+    }
+
+    function drawTownSign(t) {
+      ctx.fillStyle = '#5d3a22';
+      ctx.fillRect(521, 446, 5, 22);
+      ctx.fillStyle = '#8a5f36';
+      ctx.fillRect(486, 418, 80, 26);
+      ctx.fillStyle = '#6a4526';
+      ctx.fillRect(489, 421, 74, 20);
+      ctx.fillStyle = '#ffe9bd';
+      ctx.font = '700 14px "Hiragino Sans", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('TENタウン', 526, 432);
+    }
+
+    function drawWindow(x, y, seed, t) {
+      ctx.fillStyle = '#3a2a20';
+      ctx.fillRect(x - 1, y - 1, 18, 20);
+      var a = 0.82 + 0.18 * Math.sin(t * 1.7 + seed);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#ffd98a';
+      ctx.fillRect(x, y, 16, 18);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#3a2a20';
+      ctx.fillRect(x + 7, y, 2, 18);
+      ctx.fillRect(x, y + 8, 16, 2);
+    }
+
+    function drawBuilding(b, t) {
+      var top = b.baseY - b.wallH;
+      var roofTop = top - b.roofH;
+      /* 影 */
+      ctx.fillStyle = 'rgba(20,8,30,0.35)';
+      ctx.fillRect(b.x - 5, b.baseY - 3, b.w + 10, 7);
+      /* 煙突（工場） */
+      if (b.style === 'forge') {
+        ctx.fillStyle = '#6a4a3a';
+        ctx.fillRect(b.x + b.w - 40, roofTop - 16, 14, 32);
+        ctx.fillStyle = '#4a3a30';
+        ctx.fillRect(b.x + b.w - 42, roofTop - 18, 18, 6);
+      }
+      /* 壁 */
+      ctx.fillStyle = b.pal.wall;
+      ctx.fillRect(b.x, top, b.w, b.wallH);
+      ctx.fillStyle = 'rgba(40,10,60,0.18)';
+      ctx.fillRect(b.x + b.w - 12, top, 12, b.wallH);
+      ctx.fillStyle = b.pal.trim;
+      ctx.fillRect(b.x, b.baseY - 5, b.w, 5);
+      /* 屋根（段々のドット絵風） */
+      var rows = Math.ceil(b.roofH / 4);
+      for (var r = 0; r < rows; r++) {
+        var inset = Math.round((r / rows) * b.w * 0.13);
+        ctx.fillStyle = b.pal.roof;
+        ctx.fillRect(b.x - 6 + inset, roofTop + r * 4, b.w + 12 - inset * 2, 4);
+      }
+      var lastInset = Math.round(((rows - 1) / rows) * b.w * 0.13);
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(b.x - 6, top - 4, b.w + 12, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.13)';
+      ctx.fillRect(b.x - 6 + lastInset, roofTop, b.w + 12 - lastInset * 2, 3);
+      /* スタイル別の飾り */
+      if (b.style === 'lab') {
+        ctx.fillStyle = '#9fb6bd';
+        ctx.fillRect(b.doorX - 15, roofTop - 4, 30, 6);
+        ctx.fillRect(b.doorX - 11, roofTop - 10, 22, 6);
+        ctx.fillRect(b.doorX - 6, roofTop - 15, 12, 5);
+        ctx.fillStyle = Math.floor(t * 1.4) % 2 ? '#ff5a5a' : '#7a2e2e';
+        ctx.fillRect(b.doorX - 2, roofTop - 20, 4, 5);
+      }
+      if (b.style === 'guide') {
+        ctx.fillStyle = '#5d3a22';
+        ctx.fillRect(b.x + b.w - 14, roofTop - 16, 3, 18);
+        ctx.fillStyle = '#e86a8a';
+        ctx.fillRect(b.x + b.w - 11, roofTop - 16, Math.round(11 + Math.sin(t * 3) * 1.5), 8);
+      }
+      if (b.style === 'pixel') {
+        for (var px = 0; px < Math.floor((b.w - 8) / 6); px++) {
+          ctx.fillStyle = px % 2 ? '#ffd98a' : '#2e3a5d';
+          ctx.fillRect(b.x + 4 + px * 6, top + 4, 6, 6);
+        }
+      }
+      /* 窓 */
+      var lw = b.x + Math.round(b.w * 0.24) - 8;
+      var rw = b.x + Math.round(b.w * 0.76) - 8;
+      var wy = top + 18;
+      if (b.style === 'record') {
+        ctx.fillStyle = '#14101c';
+        ctx.beginPath(); ctx.arc(lw + 8, wy + 9, 12, 0, 7); ctx.fill();
+        ctx.fillStyle = '#c7a23c';
+        ctx.beginPath(); ctx.arc(lw + 8, wy + 9, 4, 0, 7); ctx.fill();
+      } else if (b.style === 'forge') {
+        ctx.fillStyle = '#3a2a1c';
+        ctx.beginPath(); ctx.arc(lw + 8, wy + 9, 10, 0, 7); ctx.fill();
+        ctx.fillStyle = '#c77b3c';
+        ctx.beginPath(); ctx.arc(lw + 8, wy + 9, 4, 0, 7); ctx.fill();
+        drawWindow(rw, wy, b.seed + 3, t);
+      } else if (b.style === 'atelier') {
+        drawWindow(lw, wy, b.seed, t);
+        var ax = b.x + Math.round(b.w * 0.58), ay = top + 14;
+        ctx.fillStyle = '#5d4a38';
+        ctx.fillRect(ax - 2, ay - 2, 38, 30);
+        var panes = ['#e88ca0', '#7ec8e3', '#ffd98a', '#9dc98a'];
+        for (var pi = 0; pi < 4; pi++) {
+          ctx.fillStyle = panes[pi];
+          ctx.fillRect(ax + (pi % 2) * 18, ay + Math.floor(pi / 2) * 14, 16, 12);
+        }
+      } else {
+        drawWindow(lw, wy, b.seed, t);
+        drawWindow(rw, wy, b.seed + 3, t);
+      }
+      if (b.style === 'generic') {
+        ctx.fillStyle = '#7a4a3a';
+        ctx.fillRect(lw - 1, wy + 20, 20, 5);
+        ctx.fillStyle = '#e86a8a'; ctx.fillRect(lw + 2, wy + 17, 3, 3);
+        ctx.fillStyle = '#ffd98a'; ctx.fillRect(lw + 8, wy + 16, 3, 3);
+        ctx.fillStyle = '#e86a8a'; ctx.fillRect(lw + 14, wy + 17, 3, 3);
+      }
+      /* ドア */
+      ctx.fillStyle = '#4a2c17';
+      ctx.fillRect(b.doorX - 11, b.baseY - 32, 22, 32);
+      ctx.fillStyle = '#5d3a22';
+      ctx.fillRect(b.doorX - 8, b.baseY - 29, 16, 26);
+      ctx.fillStyle = '#ffd98a';
+      ctx.fillRect(b.doorX + 4, b.baseY - 17, 3, 3);
+      ctx.fillStyle = '#8a6a4c';
+      ctx.fillRect(b.doorX - 15, b.baseY - 3, 30, 3);
+      /* 看板（二段：店の種類＋アプリ名） */
+      ctx.font = '700 11px "Hiragino Sans", sans-serif';
+      var line1 = b.shop + (b.style === 'music' ? ' ♪' : '');
+      var w1 = ctx.measureText(line1).width;
+      ctx.font = '700 10px "Hiragino Sans", sans-serif';
+      var w2 = ctx.measureText(b.name).width;
+      var bw = Math.max(w1, w2) + 16;
+      var nameFont = '700 10px "Hiragino Sans", sans-serif';
+      if (bw > b.w + 26) { /* 長い名前は縮小 */
+        nameFont = '700 8px "Hiragino Sans", sans-serif';
+        ctx.font = nameFont;
+        w2 = ctx.measureText(b.name).width;
+        bw = Math.max(w1, w2) + 16;
+      }
+      var bx = b.doorX - bw / 2, by = top - 14;
+      ctx.fillStyle = b.pal.trim;
+      ctx.fillRect(bx - 2, by - 2, bw + 4, 31);
+      ctx.fillStyle = '#241428';
+      ctx.fillRect(bx, by, bw, 27);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '700 11px "Hiragino Sans", sans-serif';
+      ctx.fillStyle = '#ffd98a';
+      ctx.fillText(line1, b.doorX, by + 8);
+      ctx.font = nameFont;
+      ctx.fillStyle = b.style === 'live' ? '#8ae6ff' : '#ffe9bd';
+      ctx.fillText(b.name, b.doorX, by + 20);
+      /* ライブハウスの電飾 */
+      if (b.style === 'live') {
+        var cols = ['#ff5a7a', '#ffd98a', '#7ae0ff', '#9dff7a'];
+        for (var bi = 0; bi < 8; bi++) {
+          ctx.globalAlpha = ((Math.floor(t * 2) + bi) % 4 === 0) ? 0.25 : 1;
+          ctx.fillStyle = cols[bi % 4];
+          ctx.fillRect(bx + 4 + bi * ((bw - 8) / 7), by - 8, 4, 4);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function drawTree(tr, t) {
+      var sway = Math.round(Math.sin(t * 1.2 + tr.x) * 1);
+      ctx.fillStyle = 'rgba(20,8,30,0.3)';
+      ctx.fillRect(tr.x - 14, tr.y - 3, 28, 5);
+      ctx.fillStyle = '#4a3220';
+      ctx.fillRect(tr.x - 3, tr.y - 16, 6, 16);
+      ctx.fillStyle = '#2c4a2c';
+      ctx.fillRect(tr.x - 20 + sway, tr.y - 44, 40, 15);
+      ctx.fillRect(tr.x - 15 + sway, tr.y - 55, 30, 12);
+      ctx.fillRect(tr.x - 9 + sway, tr.y - 63, 18, 9);
+      ctx.fillStyle = '#3f6034';
+      ctx.fillRect(tr.x - 12 + sway, tr.y - 50, 10, 5);
+      ctx.fillRect(tr.x + 4 + sway, tr.y - 60, 8, 4);
+      ctx.fillRect(tr.x + 8 + sway, tr.y - 38, 9, 5);
+    }
+
+    function drawLamp(l) {
+      ctx.fillStyle = '#2c2434';
+      ctx.fillRect(l.x - 2, l.y - 30, 4, 30);
+      ctx.fillStyle = '#3a2c22';
+      ctx.fillRect(l.x - 4, l.y - 37, 8, 8);
+      ctx.fillStyle = '#ffd98a';
+      ctx.fillRect(l.x - 3, l.y - 36, 6, 6);
+    }
+
+    function drawFountain(t) {
+      var cx = FOUNTAIN.x, cy = FOUNTAIN.y, r = FOUNTAIN.r;
+      ctx.fillStyle = 'rgba(20,8,30,0.3)';
+      ctx.fillRect(cx - r - 4, cy + r * 0.62 - 2, (r + 4) * 2, 6);
+      for (var dy = -r; dy <= r; dy += 4) {
+        var halfW = Math.sqrt(r * r - dy * dy);
+        ctx.fillStyle = dy > 4 ? '#5d6a80' : '#76839a';
+        ctx.fillRect(Math.round(cx - halfW), Math.round(cy + dy * 0.62), Math.round(halfW * 2), 4);
+      }
+      var wr = r - 8;
+      for (var wy2 = -wr; wy2 <= wr; wy2 += 4) {
+        var hw = Math.sqrt(wr * wr - wy2 * wy2);
+        ctx.fillStyle = '#5d9ec4';
+        ctx.fillRect(Math.round(cx - hw), Math.round(cy + wy2 * 0.62), Math.round(hw * 2), 4);
+      }
+      ctx.fillStyle = '#dff6ff';
+      for (var s = 0; s < 7; s++) {
+        var sx = cx + Math.sin(t * 2 + s * 1.7) * 20;
+        var sy = cy + Math.cos(t * 1.6 + s * 2.3) * 10;
+        ctx.fillRect(Math.round(sx), Math.round(sy), 3, 2);
+      }
+      /* 中央の柱と水しぶき */
+      ctx.fillStyle = '#76839a';
+      ctx.fillRect(cx - 5, cy - 24, 10, 22);
+      ctx.fillStyle = '#8b99b0';
+      ctx.fillRect(cx - 12, cy - 29, 24, 5);
+      var jet = 10 + Math.sin(t * 5) * 3;
+      ctx.fillStyle = '#cfeeff';
+      ctx.fillRect(cx - 2, Math.round(cy - 29 - jet), 4, Math.round(jet));
+      var drop = (t * 26) % 9;
+      ctx.fillRect(cx - 9, Math.round(cy - 34 + drop), 3, 3);
+      ctx.fillRect(cx + 6, Math.round(cy - 36 + drop), 3, 3);
+    }
+
+    function drawCat() {
+      ctx.fillStyle = 'rgba(15,5,25,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(cat.x, cat.y - 1, 12, 4, 0, 0, 7);
+      ctx.fill();
+      var frame = 0;
+      if (cat.moving) frame = (Math.floor(cat.walkTime / 0.14) % 2) + 1;
+      var bob = cat.moving ? (frame === 1 ? -2 : 0) : 0;
+      ctx.drawImage(SPRITES[cat.dir][frame], Math.round(cat.x - 16), Math.round(cat.y - 35 + bob));
+    }
+
+    /* ---------- メインループ ---------- */
+    var smoke = [];
+    var lastSmoke = 0;
+    var last = performance.now();
+
+    function render(t, dt) {
+      drawSky(t);
+      drawGround(t);
+      drawTownSign(t);
+      /* Yソート：足元Yが小さいものから描く（裏に回ると隠れる） */
+      var ents = [];
+      buildings.forEach(function (b) { ents.push({ y: b.baseY, draw: function () { drawBuilding(b, t); } }); });
+      TREES.forEach(function (tr) { ents.push({ y: tr.y, draw: function () { drawTree(tr, t); } }); });
+      LAMPS.forEach(function (l) { ents.push({ y: l.y, draw: function () { drawLamp(l); } }); });
+      ents.push({ y: FOUNTAIN.y + FOUNTAIN.r * 0.62, draw: function () { drawFountain(t); } });
+      ents.push({ y: cat.y, draw: drawCat });
+      ents.sort(function (a, b) { return a.y - b.y; });
+      ents.forEach(function (e) { e.draw(); });
+      /* 夕影 */
+      ctx.fillStyle = 'rgba(38,14,74,0.07)';
+      ctx.fillRect(0, 0, W, H);
+      /* 工場の煙 */
+      smoke.forEach(function (p) {
+        ctx.fillStyle = 'rgba(205,195,215,' + Math.max(0, 0.5 * (1 - p.life / 3)).toFixed(3) + ')';
+        ctx.fillRect(Math.round(p.x - p.r / 2), Math.round(p.y - p.r / 2), Math.round(p.r), Math.round(p.r));
+      });
+      /* 街灯の光 */
+      LAMPS.forEach(function (l) {
+        var fl = 0.05 + 0.012 * Math.sin(t * 11 + l.x);
+        ctx.fillStyle = 'rgba(255,202,122,1)';
+        ctx.globalAlpha = fl * 0.7; ctx.fillRect(l.x - 22, l.y - 54, 44, 44);
+        ctx.globalAlpha = fl;       ctx.fillRect(l.x - 14, l.y - 46, 28, 28);
+        ctx.globalAlpha = fl * 1.5; ctx.fillRect(l.x - 8, l.y - 40, 16, 16);
+        ctx.globalAlpha = 1;
+      });
+      /* 入店プロンプト吹き出し */
+      if (nearBuilding && !shopOpen) {
+        var b = nearBuilding;
+        var bobY = Math.round(Math.sin(t * 4) * 2);
+        var bx = b.doorX, by = b.baseY - b.wallH - b.roofH - 30 + bobY;
+        ctx.fillStyle = '#8a5f36';
+        ctx.fillRect(bx - 27, by - 10, 54, 20);
+        ctx.fillStyle = '#fff3d6';
+        ctx.fillRect(bx - 25, by - 8, 50, 16);
+        ctx.fillRect(bx - 3, by + 8, 6, 5);
+        ctx.fillStyle = '#2a1602';
+        ctx.font = '700 11px "Hiragino Sans", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('▼ 入る', bx, by + 1);
+      }
+    }
+
+    function frame(now) {
+      var dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      var t = now / 1000;
+      if (!shopOpen) updateCat(dt);
+      updatePrompt();
+      var forge = null;
+      for (var i = 0; i < buildings.length; i++) if (buildings[i].style === 'forge') forge = buildings[i];
+      if (forge && t - lastSmoke > 0.45) {
+        lastSmoke = t;
+        smoke.push({ x: forge.x + forge.w - 33, y: forge.baseY - forge.wallH - forge.roofH - 20, r: 5, life: 0 });
+      }
+      smoke = smoke.filter(function (p) { return (p.life += dt) < 3; });
+      smoke.forEach(function (p) { p.y -= 13 * dt; p.x += (3 + Math.sin(t * 2 + p.life * 3) * 5) * dt; p.r += 2.5 * dt; });
+      render(t, dt);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>
