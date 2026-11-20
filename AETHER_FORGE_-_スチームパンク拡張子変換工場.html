@@ -1,0 +1,3195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AETHER FORGE // スチームパンク拡張子変換工場</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip (軽量ZIP梱包ライブラリ / オフライン時は内蔵フォールバックZIPエンジンが自動作動) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+  <!-- Typography: Cinzel (刻印見出し), JetBrains Mono (計器・コード), Noto Sans JP (日本語) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       AETHER FORGE : STEAMPUNK DESIGN TOKENS & INDUSTRIAL TEXTURES
+       ========================================================================== */
+    :root {
+      --iron-deep: #0e0c0a;
+      --iron-base: #161310;
+      --iron-plate: #1f1a16;
+      --iron-raised: #29221c;
+      --brass-dark: #6b4c1d;
+      --brass-mid: #b38336;
+      --brass-bright: #e0b45c;
+      --brass-pale: #f3d796;
+      --copper-mid: #9e5230;
+      --amber-glow: #ff9c2a;
+      --amber-hot: #ff6200;
+      --parchment: #e5d8bf;
+      --muted-ink: #9c8f7a;
+      --blueprint-bg: #0c1f35;
+      --blueprint-grid: rgba(110, 185, 255, 0.12);
+      --blueprint-line: #6bc2ff;
+      --blueprint-ink: #dff1ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--iron-deep);
+      color: var(--parchment);
+      font-family: 'Noto Sans JP', sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 鋳鉄・ヘアライン金属背景 */
+    body {
+      background-image:
+        radial-gradient(circle at 20% 0%, rgba(255, 156, 42, 0.08), transparent 45%),
+        radial-gradient(circle at 85% 100%, rgba(179, 131, 54, 0.07), transparent 40%),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.012) 0px,
+          rgba(255, 255, 255, 0.012) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+    }
+
+    .font-display { font-family: 'Cinzel', serif; letter-spacing: 0.08em; }
+    .font-mono-tech { font-family: 'JetBrains Mono', monospace; }
+
+    /* 真鍮プレート＆リベット枠 */
+    .brass-panel {
+      background: linear-gradient(160deg, #241e19 0%, #171310 60%, #120f0c 100%);
+      border: 1px solid rgba(179, 131, 54, 0.45);
+      box-shadow:
+        inset 0 1px 0 rgba(243, 215, 150, 0.14),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.7),
+        0 10px 28px rgba(0, 0, 0, 0.65);
+      position: relative;
+    }
+
+    .brass-panel::before,
+    .brass-panel::after {
+      content: "";
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, var(--brass-pale), var(--brass-dark));
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+    .brass-panel::before { top: 8px; left: 8px; }
+    .brass-panel::after { top: 8px; right: 8px; }
+
+    .iron-recess {
+      background: linear-gradient(180deg, #100d0b 0%, #171310 100%);
+      border: 1px solid rgba(179, 131, 54, 0.25);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.85);
+    }
+
+    /* 真鍮メタルボタン */
+    .btn-brass {
+      background: linear-gradient(180deg, #d7a951 0%, #9b6c24 55%, #734d17 100%);
+      color: #120e09;
+      border: 1px solid #f0cf85;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 245, 214, 0.55),
+        0 4px 12px rgba(0, 0, 0, 0.65);
+      font-weight: 700;
+      transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.15s ease;
+      cursor: pointer;
+    }
+    .btn-brass:hover:not(:disabled) {
+      filter: brightness(1.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 245, 214, 0.7),
+        0 0 16px rgba(255, 156, 42, 0.35),
+        0 4px 14px rgba(0, 0, 0, 0.7);
+    }
+    .btn-brass:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    .btn-brass:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(0.4);
+    }
+
+    .btn-iron {
+      background: linear-gradient(180deg, #2d2620 0%, #1d1814 100%);
+      color: var(--parchment);
+      border: 1px solid rgba(179, 131, 54, 0.45);
+      box-shadow: inset 0 1px 0 rgba(243, 215, 150, 0.12), 0 2px 6px rgba(0, 0, 0, 0.5);
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .btn-iron:hover:not(:disabled) {
+      border-color: var(--brass-bright);
+      color: var(--brass-pale);
+      background: linear-gradient(180deg, #382f26 0%, #241e18 100%);
+    }
+    .btn-iron:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    .btn-iron:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* 琥珀色インジケータランプ */
+    .lamp {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #382a1e;
+      border: 1px solid #6b4c1d;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.9);
+      display: inline-block;
+      transition: all 0.25s ease;
+    }
+    .lamp.on {
+      background: radial-gradient(circle at 35% 35%, #fff0c2, #ff9c2a 55%, #cc5200 100%);
+      border-color: #ffd384;
+      box-shadow: 0 0 8px rgba(255, 156, 42, 0.85), 0 0 16px rgba(255, 98, 0, 0.45);
+    }
+    .lamp.green {
+      background: radial-gradient(circle at 35% 35%, #d6ffd9, #45c768 60%, #1d6b34 100%);
+      border-color: #8cf0a5;
+      box-shadow: 0 0 8px rgba(69, 199, 104, 0.75);
+    }
+    .lamp.red {
+      background: radial-gradient(circle at 35% 35%, #ffd0c7, #e8452c 60%, #8a190a 100%);
+      border-color: #ff9a8a;
+      box-shadow: 0 0 8px rgba(232, 69, 44, 0.8);
+    }
+
+    /* ニキシー管風デジタル表示 */
+    .nixie-box {
+      background: #0b0806;
+      border: 1px solid #593e18;
+      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.95);
+      color: #ff9c2a;
+      text-shadow: 0 0 6px rgba(255, 136, 0, 0.85), 0 0 14px rgba(255, 85, 0, 0.45);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* カスタムレンジスライダー（真鍮ノブ） */
+    input[type="range"].brass-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #100d0b;
+      border: 1px solid rgba(179, 131, 54, 0.4);
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"].brass-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #f5dc9d, #b88433 65%, #5c3d11 100%);
+      border: 1px solid #f7e4b5;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.85);
+      cursor: pointer;
+    }
+    input[type="range"].brass-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #f5dc9d, #b88433 65%, #5c3d11 100%);
+      border: 1px solid #f7e4b5;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.85);
+      cursor: pointer;
+    }
+
+    /* カスタム入力フォーム */
+    .forge-input, .forge-select {
+      background-color: #100d0b;
+      border: 1px solid rgba(179, 131, 54, 0.45);
+      color: var(--parchment);
+      border-radius: 0.5rem;
+      padding: 0.45rem 0.65rem;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .forge-input:focus, .forge-select:focus {
+      border-color: var(--amber-glow);
+      box-shadow: 0 0 0 2px rgba(255, 156, 42, 0.2);
+    }
+
+    /* 歯車アニメーション（body.anim-offで完全停止） */
+    @keyframes spinCW {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinCCW {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    .gear-slow-cw { animation: spinCW 26s linear infinite; transform-origin: center; }
+    .gear-slow-ccw { animation: spinCCW 18s linear infinite; transform-origin: center; }
+    body.is-forging .gear-slow-cw { animation-duration: 2.2s; }
+    body.is-forging .gear-slow-ccw { animation-duration: 1.5s; }
+    body.anim-off .gear-slow-cw,
+    body.anim-off .gear-slow-ccw {
+      animation: none !important;
+    }
+
+    /* 蒸気パーティクル演出 */
+    @keyframes steamRise {
+      0% { transform: translateY(0) scale(0.7); opacity: 0; }
+      25% { opacity: 0.42; }
+      100% { transform: translateY(-70px) scale(2.1); opacity: 0; }
+    }
+    .steam-puff {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(235, 224, 206, 0.55) 0%, rgba(235, 224, 206, 0) 70%);
+      pointer-events: none;
+      animation: steamRise 1.1s ease-out forwards;
+    }
+    body.anim-off .steam-puff { display: none !important; }
+
+    /* ドロップゾーンのアクティブ演出 */
+    .drop-hopper {
+      border: 2px dashed rgba(179, 131, 54, 0.5);
+      background: radial-gradient(circle at center, rgba(255, 156, 42, 0.04) 0%, rgba(14, 12, 10, 0.85) 100%);
+      transition: all 0.2s ease;
+    }
+    .drop-hopper.dragover {
+      border-color: var(--amber-glow);
+      background: radial-gradient(circle at center, rgba(255, 156, 42, 0.14) 0%, rgba(26, 20, 14, 0.92) 100%);
+      box-shadow: inset 0 0 24px rgba(255, 156, 42, 0.2);
+    }
+
+    /* 炉タブのアクティブ状態 */
+    .furnace-tab {
+      border-bottom: 2px solid transparent;
+      color: var(--muted-ink);
+      transition: all 0.18s ease;
+    }
+    .furnace-tab.active {
+      color: var(--brass-pale);
+      border-bottom-color: var(--amber-glow);
+      background: linear-gradient(180deg, rgba(255, 156, 42, 0.12) 0%, rgba(255, 156, 42, 0.02) 100%);
+    }
+
+    /* 青写真（BLUEPRINT / GUIDE）独立タブ専用スタイル */
+    .blueprint-sheet {
+      background-color: var(--blueprint-bg);
+      background-image:
+        linear-gradient(var(--blueprint-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--blueprint-grid) 1px, transparent 1px),
+        linear-gradient(rgba(110, 185, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(110, 185, 255, 0.05) 1px, transparent 1px);
+      background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
+      border: 1px solid rgba(107, 194, 255, 0.4);
+      box-shadow: inset 0 0 40px rgba(4, 14, 28, 0.85), 0 12px 32px rgba(0, 0, 0, 0.65);
+      color: var(--blueprint-ink);
+    }
+    .blueprint-card {
+      background: rgba(9, 25, 44, 0.72);
+      border: 1px solid rgba(107, 194, 255, 0.35);
+    }
+
+    /* スクロールバー装飾 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #100d0b; }
+    ::-webkit-scrollbar-thumb { background: #5c431f; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #8c662e; }
+
+    /* トースト通知 */
+    .toast-plate {
+      background: linear-gradient(180deg, #2b231b 0%, #17120e 100%);
+      border: 1px solid var(--brass-bright);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 156, 42, 0.2);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-amber-700 selection:text-amber-100">
+
+  <!-- ======================================================================
+       HEADER: CONTROL BRIDGE (ロゴ・歯車・タブ切替・SFX/ANIMスイッチ)
+       ====================================================================== -->
+  <header class="sticky top-0 z-40 border-b border-amber-700/40 bg-[#120f0c]/95 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <!-- ブランド＆回転歯車 -->
+      <div class="flex items-center gap-3">
+        <div class="relative w-11 h-11 flex items-center justify-center rounded-lg iron-recess shrink-0" aria-hidden="true">
+          <svg viewBox="0 0 64 64" class="w-9 h-9">
+            <!-- 大歯車 -->
+            <g class="gear-slow-cw" fill="none" stroke="#d4a853" stroke-width="2.5">
+              <circle cx="28" cy="34" r="14" fill="rgba(179,131,54,0.16)"/>
+              <circle cx="28" cy="34" r="5" fill="#120f0c"/>
+              <path d="M28 16v4M28 48v4M10 34h4M42 34h4M15.3 21.3l2.8 2.8M37.9 43.9l2.8 2.8M40.7 21.3l-2.8 2.8M18.1 43.9l-2.8 2.8" stroke-width="3.6" stroke-linecap="square"/>
+            </g>
+            <!-- 小歯車 -->
+            <g class="gear-slow-ccw" fill="none" stroke="#ff9c2a" stroke-width="2">
+              <circle cx="48" cy="18" r="8" fill="rgba(255,156,42,0.14)"/>
+              <circle cx="48" cy="18" r="2.8" fill="#120f0c"/>
+              <path d="M48 7v3M48 26v3M37 18h3M56 18h3M40.2 10.2l2.1 2.1M53.7 23.7l2.1 2.1M55.8 10.2l-2.1 2.1M42.3 23.7l-2.1 2.1" stroke-width="2.6" stroke-linecap="square"/>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-display text-base sm:text-lg font-bold text-[#f3d796] leading-tight tracking-wider">
+            AETHER FORGE
+          </h1>
+          <p class="font-mono-tech text-[10px] sm:text-xs text-[#9c8f7a] tracking-widest uppercase">
+            Local Steampunk Extension Foundry
+          </p>
+        </div>
+      </div>
+
+      <!-- メイン画面 / 独立解説タブ切替 -->
+      <nav class="flex items-center rounded-lg p-1 iron-recess" aria-label="Primary Views">
+        <button id="navFactoryBtn" type="button" class="px-3 sm:px-4 py-1.5 rounded-md font-mono-tech text-xs font-bold tracking-wider transition-all bg-amber-600/25 text-[#f3d796] border border-amber-500/60">
+          WORKSHOP
+        </button>
+        <button id="navBlueprintBtn" type="button" class="px-3 sm:px-4 py-1.5 rounded-md font-mono-tech text-xs font-bold tracking-wider transition-all text-[#9c8f7a] hover:text-[#e5d8bf] border border-transparent">
+          BLUEPRINT / GUIDE
+        </button>
+      </nav>
+
+      <!-- MECHANICAL SFX / ANIMATION 独立スイッチ群 -->
+      <div class="flex items-center gap-2 ml-auto sm:ml-0">
+        <button id="toggleSfxBtn" type="button" class="btn-iron px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-[11px] font-mono-tech" title="Web Audio API 機械音・蒸気効果音のON/OFF">
+          <span id="sfxLamp" class="lamp on"></span>
+          <span>SFX: <strong id="sfxStateLabel">ON</strong></span>
+        </button>
+        <button id="toggleAnimBtn" type="button" class="btn-iron px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-[11px] font-mono-tech" title="歯車回転・蒸気アニメーションのON/OFF">
+          <span id="animLamp" class="lamp on"></span>
+          <span>ANIM: <strong id="animStateLabel">ON</strong></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       VIEW 1: WORKSHOP (メイン変換工場)
+       ====================================================================== -->
+  <main id="factoryView" class="max-w-7xl mx-auto px-3 sm:px-5 py-4 sm:py-6 space-y-5">
+
+    <!-- TOP ROW: インテイクホッパー（一括投入）＋ 圧力計＆ニキシー計器盤 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- 一括ファイル投入ホッパー -->
+      <div class="lg:col-span-8 brass-panel rounded-xl p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="lamp on"></span>
+            <h2 class="font-display text-xs sm:text-sm font-bold text-[#e0b45c] uppercase tracking-widest">
+              01 // Intake Hopper — Batch File Loader
+            </h2>
+          </div>
+          <span class="font-mono-tech text-[10px] text-[#9c8f7a] uppercase tracking-wider hidden sm:inline">
+            100% Client-Side / Zero Upload
+          </span>
+        </div>
+
+        <div id="dropZone" class="drop-hopper rounded-xl p-5 sm:p-6 text-center cursor-pointer relative overflow-hidden">
+          <input id="fileInput" type="file" multiple class="hidden" accept="image/*,audio/*,.txt,.md,.markdown,.html,.htm,.json,.csv,.tsv,.xml,.log">
+          <div class="flex flex-col items-center justify-center gap-2.5">
+            <!-- 精密SVGインテイクアイコン -->
+            <svg viewBox="0 0 48 48" class="w-10 h-10 text-[#d4a853]" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M8 14l8 12v10h16V26l8-12H8z" fill="rgba(179,131,54,0.12)"/>
+              <path d="M24 6v14M18 14l6 6 6-6" stroke="#ff9c2a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="12" y1="40" x2="36" y2="40" stroke-width="2.2"/>
+            </svg>
+            <div>
+              <p class="text-sm sm:text-base font-bold text-[#f3d796]">
+                複数ファイルをここにドラッグ＆ドロップ、またはタップして投入
+              </p>
+              <p class="font-mono-tech text-[11px] text-[#9c8f7a] mt-1">
+                IMAGE (PNG/JPG/WEBP) &bull; AUDIO (WAV/MP3/M4A/OGG) &bull; TEXT/DATA (TXT/MD/HTML/JSON/CSV)
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-2 mt-2">
+              <button id="selectFilesBtn" type="button" class="btn-brass px-4 py-2 rounded-lg text-xs font-mono-tech tracking-wider">
+                SELECT FILES
+              </button>
+              <button id="openDirectTextBtn" type="button" class="btn-iron px-3.5 py-2 rounded-lg text-xs font-mono-tech tracking-wider">
+                DIRECT TEXT INPUT
+              </button>
+              <button id="injectSampleBtn" type="button" class="btn-iron px-3.5 py-2 rounded-lg text-xs font-mono-tech tracking-wider text-amber-300/90">
+                LOAD TEST SAMPLES
+              </button>
+            </div>
+          </div>
+          <!-- 蒸気エフェクト発生コンテナ -->
+          <div id="steamContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+        </div>
+      </div>
+
+      <!-- アナログ圧力計＆ニキシー管計器盤 -->
+      <div class="lg:col-span-4 brass-panel rounded-xl p-4 sm:p-5 flex flex-col justify-between gap-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-display text-xs sm:text-sm font-bold text-[#e0b45c] uppercase tracking-widest">
+            Boiler Telemetry
+          </h2>
+          <span id="boilerStatusText" class="font-mono-tech text-[11px] text-amber-400">STANDBY</span>
+        </div>
+
+        <div class="flex items-center justify-around gap-3 py-1">
+          <!-- アナログ圧力計 SVG -->
+          <div class="relative w-32 h-28 sm:w-36 sm:h-30 shrink-0">
+            <svg viewBox="0 0 160 130" class="w-full h-full">
+              <!-- 外枠真鍮リング -->
+              <circle cx="80" cy="82" r="56" fill="#13100d" stroke="#b8893a" stroke-width="5"/>
+              <circle cx="80" cy="82" r="50" fill="#1d1813" stroke="#593e18" stroke-width="1.5"/>
+              <!-- 圧力弧（通常〜レッドゾーン） -->
+              <path d="M 38 98 A 45 45 0 1 1 122 98" fill="none" stroke="#473827" stroke-width="6" stroke-linecap="round"/>
+              <path id="gaugeArc" d="M 38 98 A 45 45 0 1 1 122 98" fill="none" stroke="#ff9c2a" stroke-width="6" stroke-linecap="round" stroke-dasharray="198" stroke-dashoffset="198" style="transition: stroke-dashoffset 0.3s ease;"/>
+              <!-- レッドゾーン目盛 -->
+              <path d="M 114 54 A 45 45 0 0 1 122 98" fill="none" stroke="#d94126" stroke-width="3" opacity="0.8"/>
+              <!-- 目盛テキスト -->
+              <text x="42" y="108" fill="#9c8f7a" font-size="8" font-family="JetBrains Mono">0</text>
+              <text x="74" y="47" fill="#9c8f7a" font-size="8" font-family="JetBrains Mono">50</text>
+              <text x="108" y="108" fill="#e85d44" font-size="8" font-family="JetBrains Mono">100</text>
+              <text x="80" y="68" text-anchor="middle" fill="#b38336" font-size="7" font-family="JetBrains Mono" letter-spacing="1">PSI / LOAD</text>
+              <!-- 針 -->
+              <g id="gaugeNeedle" style="transform-origin: 80px 82px; transform: rotate(-115deg); transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);">
+                <polygon points="78,84 82,84 80,38" fill="#ff9c2a"/>
+                <circle cx="80" cy="82" r="6" fill="#d4a853" stroke="#13100d" stroke-width="2"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- ニキシー管デジタルメーター -->
+          <div class="flex-1 space-y-2">
+            <div class="nixie-box rounded-lg px-3 py-1.5 flex items-center justify-between">
+              <span class="text-[10px] text-[#9c8f7a] tracking-wider" style="text-shadow:none;">QUEUED</span>
+              <span id="statQueued" class="text-base font-bold">00</span>
+            </div>
+            <div class="nixie-box rounded-lg px-3 py-1.5 flex items-center justify-between">
+              <span class="text-[10px] text-[#9c8f7a] tracking-wider" style="text-shadow:none;">FORGED</span>
+              <span id="statForged" class="text-base font-bold">00</span>
+            </div>
+            <div class="nixie-box rounded-lg px-3 py-1.5 flex items-center justify-between">
+              <span class="text-[10px] text-[#9c8f7a] tracking-wider" style="text-shadow:none;">RATIO</span>
+              <span id="statRatio" class="text-xs font-bold">-- %</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 全体プログレスバー -->
+        <div class="w-full h-2.5 rounded-full iron-recess overflow-hidden">
+          <div id="globalProgressBar" class="h-full bg-gradient-to-r from-amber-700 via-amber-500 to-yellow-300 transition-all duration-300" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN WORKSPACE: 左＝炉別設定＆プリセット / 右＝製造キュー＆一括変換・ZIP出力 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+      <!-- ================================================================
+           LEFT COLUMN: FURNACE CONSOLES (画像・音声・テキスト/データ)
+           ================================================================ -->
+      <div class="lg:col-span-5 brass-panel rounded-xl overflow-hidden">
+        <!-- 炉選択タブ -->
+        <div class="grid grid-cols-3 border-b border-amber-700/40 bg-[#14100d]">
+          <button type="button" data-furnace="image" class="furnace-tab active py-3 px-2 text-center">
+            <div class="font-display text-[11px] sm:text-xs font-bold tracking-wider">IMAGE</div>
+            <div class="font-mono-tech text-[10px] opacity-80">BOILER (<span id="countImage">0</span>)</div>
+          </button>
+          <button type="button" data-furnace="audio" class="furnace-tab py-3 px-2 text-center border-x border-amber-700/30">
+            <div class="font-display text-[11px] sm:text-xs font-bold tracking-wider">ACOUSTIC</div>
+            <div class="font-mono-tech text-[10px] opacity-80">TURBINE (<span id="countAudio">0</span>)</div>
+          </button>
+          <button type="button" data-furnace="text" class="furnace-tab py-3 px-2 text-center">
+            <div class="font-display text-[11px] sm:text-xs font-bold tracking-wider">TEXT/DATA</div>
+            <div class="font-mono-tech text-[10px] opacity-80">PRESS (<span id="countText">0</span>)</div>
+          </button>
+        </div>
+
+        <!-- コンソール本体 -->
+        <div class="p-4 sm:p-5 space-y-4">
+
+          <!-- 1. IMAGE BOILER PANEL -->
+          <div id="panelImage" class="space-y-4">
+            <!-- 実用プリセット -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-mono-tech text-[11px] text-[#e0b45c] uppercase tracking-wider">Quick Presets</span>
+                <span class="font-mono-tech text-[10px] text-[#9c8f7a]">1-Click Valve</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-preset="img-web-opt" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">Web軽量化</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">WEBP 82% / 最大1280px</div>
+                </button>
+                <button type="button" data-preset="img-jpg-white" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">白背景JPG化</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">JPG 90% / 透過白埋め</div>
+                </button>
+                <button type="button" data-preset="img-png-lossless" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">透過PNG統一</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">PNG / 原寸・透過維持</div>
+                </button>
+                <button type="button" data-preset="img-vintage-sepia" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">アンティーク調</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">JPG 88% / セピア補正</div>
+                </button>
+              </div>
+            </div>
+
+            <hr class="border-amber-800/35">
+
+            <!-- 出力形式＆画質 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">OUTPUT FORMAT</label>
+                <select id="imgFormat" class="forge-select w-full font-mono-tech">
+                  <option value="image/webp">WEBP (.webp)</option>
+                  <option value="image/jpeg">JPEG (.jpg)</option>
+                  <option value="image/png">PNG (.png)</option>
+                </select>
+              </div>
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="font-mono-tech text-[11px] text-[#d4a853]">QUALITY</label>
+                  <span id="imgQualityVal" class="font-mono-tech text-xs text-amber-400">85%</span>
+                </div>
+                <input id="imgQuality" type="range" min="10" max="100" value="85" class="brass-slider mt-1.5">
+              </div>
+            </div>
+
+            <!-- リサイズ設定 -->
+            <div class="iron-recess rounded-lg p-3 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="font-mono-tech text-[11px] text-[#d4a853]">RESIZE DIMENSIONS (PX)</span>
+                <label class="flex items-center gap-1.5 text-xs text-[#e5d8bf] cursor-pointer select-none">
+                  <input id="imgLockAspect" type="checkbox" checked class="accent-amber-500">
+                  <span class="font-mono-tech text-[11px]">比率維持</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[10px] font-mono-tech text-[#9c8f7a] mb-0.5">WIDTH (空欄=自動)</label>
+                  <input id="imgWidth" type="number" min="1" max="12000" placeholder="Original" class="forge-input w-full font-mono-tech">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-mono-tech text-[#9c8f7a] mb-0.5">HEIGHT (空欄=自動)</label>
+                  <input id="imgHeight" type="number" min="1" max="12000" placeholder="Original" class="forge-input w-full font-mono-tech">
+                </div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-[#9c8f7a] cursor-pointer select-none">
+                <input id="imgNoUpscale" type="checkbox" checked class="accent-amber-500">
+                <span>元サイズより拡大しない（縮小のみ適用）</span>
+              </label>
+            </div>
+
+            <!-- 透過背景塗りつぶし -->
+            <div class="iron-recess rounded-lg p-3 space-y-2">
+              <label class="block font-mono-tech text-[11px] text-[#d4a853]">TRANSPARENCY BACKGROUND FILL</label>
+              <div class="grid grid-cols-4 gap-1.5">
+                <button type="button" data-bgmode="transparent" class="img-bg-btn btn-iron py-1.5 rounded text-[11px] font-mono-tech border-amber-400 text-amber-200">透過</button>
+                <button type="button" data-bgmode="white" class="img-bg-btn btn-iron py-1.5 rounded text-[11px] font-mono-tech">白 (#FFF)</button>
+                <button type="button" data-bgmode="black" class="img-bg-btn btn-iron py-1.5 rounded text-[11px] font-mono-tech">黒 (#000)</button>
+                <button type="button" data-bgmode="custom" class="img-bg-btn btn-iron py-1.5 rounded text-[11px] font-mono-tech">カスタム</button>
+              </div>
+              <div id="imgCustomBgWrap" class="hidden flex items-center gap-2 pt-1">
+                <input id="imgCustomColor" type="color" value="#f5efe6" class="w-9 h-8 rounded bg-transparent border border-amber-700/50 cursor-pointer">
+                <input id="imgCustomHex" type="text" value="#f5efe6" class="forge-input flex-1 font-mono-tech text-xs">
+              </div>
+              <p class="text-[10px] text-[#9c8f7a]">※JPG出力時に「透過」選択中は自動で白背景が適用されます。</p>
+            </div>
+
+            <!-- 基本補正フィルター -->
+            <div class="iron-recess rounded-lg p-3 space-y-3">
+              <div>
+                <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">TONE / FILTER</label>
+                <select id="imgFilter" class="forge-select w-full">
+                  <option value="none">補正なし（オリジナル）</option>
+                  <option value="grayscale">グレースケール（白黒）</option>
+                  <option value="sepia">セピア調（クラシック）</option>
+                  <option value="vintage">スチームパンク・アンバー調</option>
+                  <option value="invert">階調反転（ネガ）</option>
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <div class="flex justify-between text-[10px] font-mono-tech text-[#9c8f7a] mb-1">
+                    <span>BRIGHTNESS</span><span id="imgBrightVal" class="text-amber-300">100%</span>
+                  </div>
+                  <input id="imgBrightness" type="range" min="40" max="160" value="100" class="brass-slider">
+                </div>
+                <div>
+                  <div class="flex justify-between text-[10px] font-mono-tech text-[#9c8f7a] mb-1">
+                    <span>CONTRAST</span><span id="imgContrastVal" class="text-amber-300">100%</span>
+                  </div>
+                  <input id="imgContrast" type="range" min="40" max="160" value="100" class="brass-slider">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. ACOUSTIC TURBINE PANEL -->
+          <div id="panelAudio" class="hidden space-y-4">
+            <!-- 実用プリセット -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-mono-tech text-[11px] text-[#e0b45c] uppercase tracking-wider">Quick Presets</span>
+                <span class="font-mono-tech text-[10px] text-[#9c8f7a]">1-Click Valve</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-preset="aud-master-wav" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">高音質WAV整音</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">WAV 44.1kHz / 整音+無音切</div>
+                </button>
+                <button type="button" data-preset="aud-light-webm" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">軽量圧縮出力</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">WebM/OGG / 44.1kHz Stereo</div>
+                </button>
+                <button type="button" data-preset="aud-voice-mono" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">ボイスメモ軽量化</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">Mono 22kHz / 無音カット</div>
+                </button>
+                <button type="button" data-preset="aud-lofi-radio" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">レトロ蓄音機風</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">WAV Mono 11kHz / フェード</div>
+                </button>
+              </div>
+            </div>
+
+            <hr class="border-amber-800/35">
+
+            <!-- 出力フォーマット・チャンネル・サンプルレート -->
+            <div class="space-y-3">
+              <div>
+                <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">OUTPUT FORMAT</label>
+                <select id="audFormat" class="forge-select w-full font-mono-tech">
+                  <option value="wav">WAV — 16-bit PCM 非圧縮高音質 (.wav)</option>
+                  <option value="compressed">OGG / WebM — Opus 軽量圧縮 (.webm / .ogg)</option>
+                </select>
+                <p id="audCodecInfo" class="font-mono-tech text-[10px] text-[#9c8f7a] mt-1"></p>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">CHANNELS</label>
+                  <select id="audChannels" class="forge-select w-full font-mono-tech">
+                    <option value="keep">元を維持 (Auto)</option>
+                    <option value="2">ステレオ (2ch)</option>
+                    <option value="1">モノラル (1ch)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">SAMPLE RATE</label>
+                  <select id="audSampleRate" class="forge-select w-full font-mono-tech">
+                    <option value="48000">48,000 Hz (Studio)</option>
+                    <option value="44100" selected>44,100 Hz (CD標準)</option>
+                    <option value="32000">32,000 Hz</option>
+                    <option value="22050">22,050 Hz (軽量)</option>
+                    <option value="16000">16,000 Hz (通話級)</option>
+                    <option value="11025">11,025 Hz (レトロ)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 無音トリミング -->
+            <div class="iron-recess rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 text-xs font-bold text-[#e5d8bf] cursor-pointer select-none">
+                  <input id="audTrimSilence" type="checkbox" class="accent-amber-500">
+                  <span>前後無音トリミング</span>
+                </label>
+                <span id="audTrimDbVal" class="font-mono-tech text-xs text-amber-400">-42 dB</span>
+              </div>
+              <input id="audTrimDb" type="range" min="-65" max="-15" value="-42" class="brass-slider">
+            </div>
+
+            <!-- フェードイン・フェードアウト -->
+            <div class="iron-recess rounded-lg p-3 grid grid-cols-2 gap-3">
+              <div>
+                <div class="flex justify-between text-[10px] font-mono-tech text-[#d4a853] mb-1">
+                  <span>FADE IN</span><span id="audFadeInVal" class="text-amber-300">0.0 s</span>
+                </div>
+                <input id="audFadeIn" type="range" min="0" max="5" step="0.1" value="0" class="brass-slider">
+              </div>
+              <div>
+                <div class="flex justify-between text-[10px] font-mono-tech text-[#d4a853] mb-1">
+                  <span>FADE OUT</span><span id="audFadeOutVal" class="text-amber-300">0.0 s</span>
+                </div>
+                <input id="audFadeOut" type="range" min="0" max="5" step="0.1" value="0" class="brass-slider">
+              </div>
+            </div>
+
+            <!-- 音量ノーマライズ -->
+            <div class="iron-recess rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 text-xs font-bold text-[#e5d8bf] cursor-pointer select-none">
+                  <input id="audNormalize" type="checkbox" checked class="accent-amber-500">
+                  <span>音量ノーマライズ（ピーク最適化）</span>
+                </label>
+                <span id="audNormDbVal" class="font-mono-tech text-xs text-amber-400">-1.0 dB</span>
+              </div>
+              <input id="audNormDb" type="range" min="-6" max="0" step="0.5" value="-1" class="brass-slider">
+            </div>
+          </div>
+
+          <!-- 3. TEXT & DATA PRESS PANEL -->
+          <div id="panelText" class="hidden space-y-4">
+            <!-- 実用プリセット -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-mono-tech text-[11px] text-[#e0b45c] uppercase tracking-wider">Quick Presets</span>
+                <span class="font-mono-tech text-[10px] text-[#9c8f7a]">1-Click Valve</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-preset="txt-md-html" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">MD → HTML文書</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">装飾付HTML / UTF-8 LF</div>
+                </button>
+                <button type="button" data-preset="txt-csv-json" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">CSV → 整形JSON</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">配列化 / 2スペース整形</div>
+                </button>
+                <button type="button" data-preset="txt-json-csv" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">JSON → Excel CSV</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">UTF-8 BOM付 / CRLF</div>
+                </button>
+                <button type="button" data-preset="txt-clean-plain" class="preset-btn btn-iron px-2.5 py-2 rounded-lg text-left">
+                  <div class="text-xs font-bold text-[#f3d796]">テキスト徹底整形</div>
+                  <div class="font-mono-tech text-[10px] text-[#9c8f7a]">TXT / 空白・空行整理</div>
+                </button>
+              </div>
+            </div>
+
+            <hr class="border-amber-800/35">
+
+            <!-- 出力形式＆整形オプション -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">OUTPUT FORMAT</label>
+                <select id="txtFormat" class="forge-select w-full font-mono-tech">
+                  <option value="txt">TXT (.txt)</option>
+                  <option value="md">Markdown (.md)</option>
+                  <option value="html">HTML (.html)</option>
+                  <option value="json">JSON (.json)</option>
+                  <option value="csv">CSV (.csv)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">JSON STYLE</label>
+                <select id="txtJsonStyle" class="forge-select w-full font-mono-tech">
+                  <option value="pretty2">整形 (2 spaces)</option>
+                  <option value="pretty4">整形 (4 spaces)</option>
+                  <option value="minify">圧縮 (Minify)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 文字コード＆改行コード -->
+            <div class="iron-recess rounded-lg p-3 space-y-2.5">
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block font-mono-tech text-[10px] text-[#d4a853] mb-1">読込文字コード</label>
+                  <select id="txtInputEnc" class="forge-select w-full font-mono-tech text-xs">
+                    <option value="auto">自動判定 (UTF-8 / SJIS)</option>
+                    <option value="utf-8">UTF-8</option>
+                    <option value="shift_jis">Shift-JIS (Windows)</option>
+                    <option value="euc-jp">EUC-JP</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-mono-tech text-[10px] text-[#d4a853] mb-1">出力文字コード</label>
+                  <select id="txtOutputEnc" class="forge-select w-full font-mono-tech text-xs">
+                    <option value="utf-8">UTF-8 (標準)</option>
+                    <option value="utf-8-bom">UTF-8 (BOM付 / Excel向)</option>
+                    <option value="utf-16le-bom">UTF-16LE (BOM付)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="block font-mono-tech text-[10px] text-[#d4a853] mb-1">改行コード統一 (LINE ENDING)</label>
+                <select id="txtLineEnding" class="forge-select w-full font-mono-tech text-xs">
+                  <option value="lf">LF (\n) — Mac / Linux / Web標準</option>
+                  <option value="crlf">CRLF (\r\n) — Windows標準</option>
+                  <option value="cr">CR (\r) — レガシー</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 空白・改行整理チェック群 -->
+            <div class="iron-recess rounded-lg p-3 space-y-2">
+              <span class="block font-mono-tech text-[11px] text-[#d4a853]">CLEANUP & NORMALIZE</span>
+              <label class="flex items-center gap-2 text-xs text-[#e5d8bf] cursor-pointer select-none">
+                <input id="txtTrimTrailing" type="checkbox" checked class="accent-amber-500">
+                <span>各行末の余分な空白・タブを削除</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-[#e5d8bf] cursor-pointer select-none">
+                <input id="txtCollapseBlanks" type="checkbox" checked class="accent-amber-500">
+                <span>連続する空行を1行に圧縮</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-[#e5d8bf] cursor-pointer select-none">
+                <input id="txtFullwidthSpace" type="checkbox" class="accent-amber-500">
+                <span>全角スペースを半角スペースに統一</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-[#e5d8bf] cursor-pointer select-none">
+                <input id="txtStripEdges" type="checkbox" checked class="accent-amber-500">
+                <span>先頭・末尾の不要な空行を削除</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           RIGHT COLUMN: PRODUCTION QUEUE & DISPATCH (一括変換＆ZIP出力)
+           ================================================================ -->
+      <div class="lg:col-span-7 brass-panel rounded-xl p-4 sm:p-5 flex flex-col gap-4">
+        <!-- アクションツールバー -->
+        <div class="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-amber-700/40">
+          <div class="flex items-center gap-2">
+            <span id="queueLamp" class="lamp"></span>
+            <h2 class="font-display text-xs sm:text-sm font-bold text-[#e0b45c] uppercase tracking-widest">
+              02 // Production Queue & Dispatch
+            </h2>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button id="convertAllBtn" type="button" disabled class="btn-brass flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-xs font-mono-tech tracking-wider flex items-center justify-center gap-2">
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4">
+                <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+              </svg>
+              <span>IGNITE ALL</span>
+            </button>
+            <button id="downloadZipBtn" type="button" disabled class="btn-iron flex-1 sm:flex-none px-3.5 py-2.5 rounded-lg text-xs font-mono-tech tracking-wider text-[#f3d796] flex items-center justify-center gap-2">
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>PACK ZIP</span>
+            </button>
+            <button id="clearQueueBtn" type="button" disabled class="btn-iron px-3 py-2.5 rounded-lg text-xs font-mono-tech text-red-300/90 hover:text-red-200">
+              CLEAR
+            </button>
+          </div>
+        </div>
+
+        <!-- フィルタバー -->
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-1.5 font-mono-tech">
+            <button type="button" data-filter="all" class="queue-filter-btn px-2.5 py-1 rounded bg-amber-600/30 text-[#f3d796] border border-amber-500/60">ALL</button>
+            <button type="button" data-filter="image" class="queue-filter-btn px-2.5 py-1 rounded bg-transparent text-[#9c8f7a] border border-amber-800/40 hover:text-[#e5d8bf]">IMAGE</button>
+            <button type="button" data-filter="audio" class="queue-filter-btn px-2.5 py-1 rounded bg-transparent text-[#9c8f7a] border border-amber-800/40 hover:text-[#e5d8bf]">AUDIO</button>
+            <button type="button" data-filter="text" class="queue-filter-btn px-2.5 py-1 rounded bg-transparent text-[#9c8f7a] border border-amber-800/40 hover:text-[#e5d8bf]">TEXT</button>
+          </div>
+          <span class="font-mono-tech text-[11px] text-[#9c8f7a]" id="queueSummaryText">
+            投入待ち — ファイルをドロップするかテスト素材を読み込んでください
+          </span>
+        </div>
+
+        <!-- キュー一覧コンテナ -->
+        <div id="queueList" class="space-y-2.5 min-h-[280px] max-h-[640px] overflow-y-auto pr-1">
+          <!-- 空状態プレースホルダ -->
+          <div id="emptyQueueState" class="iron-recess rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3 min-h-[260px]">
+            <svg viewBox="0 0 80 80" class="w-16 h-16 text-[#6b4c1d]/70" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="40" cy="40" r="26" stroke-dasharray="4 4"/>
+              <circle cx="40" cy="40" r="10"/>
+              <path d="M40 8v8M40 64v8M8 40h8M64 40h8"/>
+            </svg>
+            <div class="space-y-1">
+              <p class="font-display text-sm text-[#d4a853] tracking-widest">CONVEYOR IDLE</p>
+              <p class="text-xs text-[#9c8f7a] max-w-sm">
+                画像・音声・テキスト/データファイルをまとめて投入できます。左側の各炉で設定を選び、「IGNITE ALL」で一括変換を実行してください。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ======================================================================
+       VIEW 2: BLUEPRINT / GUIDE (独立青写真解説タブ)
+       ====================================================================== -->
+  <section id="blueprintView" class="hidden max-w-6xl mx-auto px-3 sm:px-5 py-5 sm:py-8">
+    <div class="blueprint-sheet rounded-xl p-5 sm:p-8 space-y-7">
+      <!-- 青写真ヘッダー -->
+      <div class="flex flex-wrap items-start justify-between gap-4 border-b border-sky-400/35 pb-5">
+        <div>
+          <p class="font-mono-tech text-xs text-sky-300 tracking-[0.2em] uppercase">
+            TECHNICAL SPECIFICATION // REV 2.4 — LOCAL FOUNDRY ARCHITECTURE
+          </p>
+          <h2 class="font-display text-xl sm:text-2xl font-bold text-white mt-1 tracking-wider">
+            AETHER FORGE — BLUEPRINT &amp; OPERATOR GUIDE
+          </h2>
+          <p class="text-xs sm:text-sm text-sky-100/80 mt-1.5 max-w-2xl">
+            本工場はWebブラウザ標準API（Canvas API / Web Audio API / MediaRecorder / TextDecoder）のみで稼働する完全ローカル完結型のファイル変換システムです。投入されたファイルが外部サーバーへ送信されることは一切ありません。
+          </p>
+        </div>
+        <button id="backToWorkshopBtn" type="button" class="px-4 py-2 rounded-lg border border-sky-300/70 bg-sky-900/50 hover:bg-sky-800/70 text-sky-100 font-mono-tech text-xs tracking-wider transition">
+          &larr; RETURN TO WORKSHOP
+        </button>
+      </div>
+
+      <!-- セクショングリッド -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+        <!-- 1. IMAGE BOILER 解説 -->
+        <article class="blueprint-card rounded-xl p-5 space-y-3">
+          <div class="flex items-center justify-between border-b border-sky-400/25 pb-2">
+            <h3 class="font-display text-sm font-bold text-sky-200 tracking-wider">01 // IMAGE BOILER</h3>
+            <span class="font-mono-tech text-[10px] text-sky-300">CANVAS 2D ENGINE</span>
+          </div>
+          <dl class="space-y-2.5 text-xs leading-relaxed">
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">PNG (.png)</dt>
+              <dd class="text-sky-100/85">可逆圧縮（劣化なし）で透過（アルファチャンネル）に対応。ロゴ、UI素材、ドット絵、スクリーンショットの保存に最適です。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">JPEG (.jpg)</dt>
+              <dd class="text-sky-100/85">写真向けに高い圧縮効率を持つ非可逆形式。透過は非対応のため、透過PNGをJPGへ変換する際は「背景色塗りつぶし」で白や任意の背景色を指定します。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">WEBP (.webp)</dt>
+              <dd class="text-sky-100/85">透過対応かつJPG以上の高圧縮を実現する次世代Web標準形式。品質80〜85%設定で画質を維持しつつファイル容量を大幅に削減できます。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">リサイズ &amp; 拡大防止</dt>
+              <dd class="text-sky-100/85">幅または高さの一方のみを指定し「比率維持」を有効にすると、アスペクト比を保ったまま自動算出されます。「元サイズより拡大しない」を有効にすると小さな画像のボケを防ぎます。</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 2. ACOUSTIC TURBINE 解説 -->
+        <article class="blueprint-card rounded-xl p-5 space-y-3">
+          <div class="flex items-center justify-between border-b border-sky-400/25 pb-2">
+            <h3 class="font-display text-sm font-bold text-sky-200 tracking-wider">02 // ACOUSTIC TURBINE</h3>
+            <span class="font-mono-tech text-[10px] text-sky-300">WEB AUDIO DSP</span>
+          </div>
+          <dl class="space-y-2.5 text-xs leading-relaxed">
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">WAV (16-bit PCM) vs WebM / OGG (Opus)</dt>
+              <dd class="text-sky-100/85">WAVは非圧縮で劣化ゼロ・即座に書き出せるため、編集素材や効果音の保管に最適です。WebM/OGGはOpusコーデックによる軽量圧縮出力で、共有・持ち運びに適しています（※圧縮書き出しはブラウザのMediaRecorder仕様上、再生時間に応じた処理時間がかかります）。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">サンプルレート (Hz) &amp; モノラル化</dt>
+              <dd class="text-sky-100/85">44,100HzがCD標準、48,000Hzが映像・スタジオ標準です。声のメモや効果音ならモノラル(1ch)＋22,050Hzにすることで容量を約1/4へ削減できます。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">前後無音トリミング (dBしきい値)</dt>
+              <dd class="text-sky-100/85">音声の先頭と末尾にある無音区間を自動除去します。-42dB前後が標準で、環境ノイズが大きい録音では-30dB付近へ上げると不要部分をカットしやすくなります。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">音量ノーマライズ (Peak Normalize)</dt>
+              <dd class="text-sky-100/85">音声全体の最大ピークを指定したdB（標準 -1.0dB）まで均一に引き上げ、音割れ（クリッピング）を防ぎながら聞きやすい音量に揃えます。</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 3. TEXT & DATA PRESS 解説 -->
+        <article class="blueprint-card rounded-xl p-5 space-y-3">
+          <div class="flex items-center justify-between border-b border-sky-400/25 pb-2">
+            <h3 class="font-display text-sm font-bold text-sky-200 tracking-wider">03 // TEXT &amp; DATA PRESS</h3>
+            <span class="font-mono-tech text-[10px] text-sky-300">PARSER &amp; ENCODER</span>
+          </div>
+          <dl class="space-y-2.5 text-xs leading-relaxed">
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">CSV &harr; JSON 相互変換</dt>
+              <dd class="text-sky-100/85">CSVの1行目をキー名としてJSONオブジェクト配列へ変換します。逆にJSON配列からは全キーを自動抽出して表形式のCSVやHTML/Markdownテーブルへ展開します。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">Markdown &harr; HTML / TXT</dt>
+              <dd class="text-sky-100/85">Markdownから見出し・コードブロック・テーブル・引用を整えたスタンドアロンHTMLを生成します。逆にHTMLからタグを取り除きクリーンなTXTやMarkdownへ抽出することも可能です。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">文字コード（UTF-8 / BOM / Shift-JIS読込）</dt>
+              <dd class="text-sky-100/85">読み込み時はUTF-8とShift-JISを自動判別して文字化けを防ぎます。出力時に「UTF-8 (BOM付)」を選ぶと、Windows版ExcelでCSVを開いた際の文字化けを防止できます。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">改行コード (LF / CRLF)</dt>
+              <dd class="text-sky-100/85">LFはWeb開発・macOS・Linux標準、CRLFはWindowsメモ帳や一部業務ツール標準です。複数ファイルの混在を一括で統一できます。</dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- 4. BATCH & COMFORT 解説 -->
+        <article class="blueprint-card rounded-xl p-5 space-y-3">
+          <div class="flex items-center justify-between border-b border-sky-400/25 pb-2">
+            <h3 class="font-display text-sm font-bold text-sky-200 tracking-wider">04 // BATCH &amp; COMFORT CONTROLS</h3>
+            <span class="font-mono-tech text-[10px] text-sky-300">WORKFLOW OPS</span>
+          </div>
+          <dl class="space-y-2.5 text-xs leading-relaxed">
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">混在投入 &amp; 一括ZIP梱包 (PACK ZIP)</dt>
+              <dd class="text-sky-100/85">画像・音声・テキストを同時にドロップしても自動で該当ボイラーへ振り分けられます。変換後は個別ダウンロードに加え、ワンクリックで全成果物を1つのZIPアーカイブにまとめて保存できます（オフライン時でも内蔵ZIP生成エンジンが自動動作します）。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">MECHANICAL SFX / ANIMATION スイッチ</dt>
+              <dd class="text-sky-100/85">右上の独立トグルで、Web Audio APIによる機械スイッチ音・蒸気音（SFX）と歯車回転・蒸気演出（ANIM）をそれぞれ個別にON/OFFできます。静かな環境やバッテリー節約時も快適に使えます。設定はブラウザに自動記憶されます。</dd>
+            </div>
+            <div>
+              <dt class="font-mono-tech font-bold text-sky-300">DIRECT TEXT INPUT &amp; TEST SAMPLES</dt>
+              <dd class="text-sky-100/85">ファイル化されていないメモやJSONも「DIRECT TEXT INPUT」から直接貼り付けて変換・コピーできます。動作確認には「LOAD TEST SAMPLES」で画像・音声・データの3種サンプルを即座に生成できます。</dd>
+            </div>
+          </dl>
+        </article>
+
+      </div>
+
+      <!-- 対応フォーマット早見表 -->
+      <div class="blueprint-card rounded-xl p-4 sm:p-5 overflow-x-auto">
+        <h3 class="font-display text-xs sm:text-sm font-bold text-sky-200 tracking-wider mb-3">
+          MATRIX // SUPPORTED EXTENSIONS &amp; PIPELINES
+        </h3>
+        <table class="w-full text-left font-mono-tech text-xs border-collapse min-w-[540px]">
+          <thead>
+            <tr class="border-b border-sky-400/40 text-sky-300">
+              <th class="py-2 pr-3">FURNACE</th>
+              <th class="py-2 pr-3">INPUT EXTENSIONS</th>
+              <th class="py-2 pr-3">OUTPUT FORMATS</th>
+              <th class="py-2">KEY CAPABILITIES</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sky-400/20 text-sky-100/85">
+            <tr>
+              <td class="py-2.5 pr-3 font-bold text-sky-200">IMAGE BOILER</td>
+              <td class="py-2.5 pr-3">PNG, JPG, WEBP, GIF, BMP, SVG</td>
+              <td class="py-2.5 pr-3">PNG, JPG, WEBP</td>
+              <td class="py-2.5">圧縮品質 / 比率維持リサイズ / 透過背景色塗り / 階調補正</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-3 font-bold text-sky-200">ACOUSTIC TURBINE</td>
+              <td class="py-2.5 pr-3">WAV, MP3, M4A, OGG, WEBM, FLAC</td>
+              <td class="py-2.5 pr-3">WAV (16-bit), WEBM/OGG (Opus)</td>
+              <td class="py-2.5">Mono/Stereo / サンプルレート / 無音切 / フェード / ノーマライズ</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-3 font-bold text-sky-200">TEXT &amp; DATA PRESS</td>
+              <td class="py-2.5 pr-3">TXT, MD, HTML, JSON, CSV, TSV</td>
+              <td class="py-2.5 pr-3">TXT, MD, HTML, JSON, CSV</td>
+              <td class="py-2.5">相互変換 / 整形・圧縮 / UTF-8・BOM・改行統一 / 空白整理</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       MODAL 1: DIRECT TEXT INPUT (テキスト直接貼り付け投入)
+       ====================================================================== -->
+  <div id="directTextModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+    <div class="brass-panel rounded-xl w-full max-w-2xl p-4 sm:p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-amber-700/40 pb-3">
+        <h3 class="font-display text-sm sm:text-base font-bold text-[#f3d796] tracking-wider">
+          DIRECT TEXT INTAKE
+        </h3>
+        <button id="closeDirectTextBtn" type="button" class="btn-iron px-2.5 py-1 rounded text-xs font-mono-tech">CLOSE</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">FILE NAME</label>
+          <input id="directTextName" type="text" value="direct-note" class="forge-input w-full font-mono-tech">
+        </div>
+        <div>
+          <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">SOURCE FORMAT</label>
+          <select id="directTextExt" class="forge-select w-full font-mono-tech">
+            <option value="md">Markdown (.md)</option>
+            <option value="txt">Plain Text (.txt)</option>
+            <option value="json">JSON (.json)</option>
+            <option value="csv">CSV (.csv)</option>
+            <option value="html">HTML (.html)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block font-mono-tech text-[11px] text-[#d4a853] mb-1">CONTENT</label>
+        <textarea id="directTextArea" rows="9" placeholder="変換・整形したいテキスト、Markdown、CSV、JSON、HTMLをここに貼り付けてください..." class="forge-input w-full font-mono-tech text-xs leading-relaxed resize-y"></textarea>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button id="cancelDirectTextBtn" type="button" class="btn-iron px-4 py-2 rounded-lg text-xs font-mono-tech">CANCEL</button>
+        <button id="submitDirectTextBtn" type="button" class="btn-brass px-5 py-2 rounded-lg text-xs font-mono-tech tracking-wider">ADD TO QUEUE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 2: RESULT PREVIEW (変換後テキスト・画像・音声の詳細プレビュー)
+       ====================================================================== -->
+  <div id="previewModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+    <div class="brass-panel rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col p-4 sm:p-6 gap-3">
+      <div class="flex items-center justify-between border-b border-amber-700/40 pb-3">
+        <div>
+          <h3 id="previewTitle" class="font-mono-tech text-sm font-bold text-[#f3d796] truncate max-w-[240px] sm:max-w-lg">PREVIEW</h3>
+          <p id="previewMeta" class="font-mono-tech text-[11px] text-[#9c8f7a]"></p>
+        </div>
+        <button id="closePreviewBtn" type="button" class="btn-iron px-2.5 py-1 rounded text-xs font-mono-tech">CLOSE</button>
+      </div>
+      <div id="previewBody" class="flex-1 overflow-auto iron-recess rounded-lg p-3 sm:p-4 min-h-[220px]"></div>
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+        <button id="previewCopyBtn" type="button" class="hidden btn-iron px-4 py-2 rounded-lg text-xs font-mono-tech">COPY TEXT</button>
+        <button id="previewDownloadBtn" type="button" class="btn-brass px-4 py-2 rounded-lg text-xs font-mono-tech">DOWNLOAD FILE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TOAST CONTAINER (alert不使用の真鍮通知プレート)
+       ====================================================================== -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-xs sm:max-w-sm pointer-events-none"></div>
+
+  <!-- ======================================================================
+       CORE APPLICATION LOGIC (完全ローカル処理)
+       ====================================================================== -->
+  <script>
+    (() => {
+      'use strict';
+
+      /* ====================================================================
+         1. WEB AUDIO API — MECHANICAL SFX ENGINE (外部音声ファイル不要)
+         ==================================================================== */
+      class MechanicalAudio {
+        constructor() {
+          this.ctx = null;
+          this.enabled = true;
+        }
+        ensureCtx() {
+          if (!this.enabled) return null;
+          try {
+            if (!this.ctx) {
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (!AudioCtx) return null;
+              this.ctx = new AudioCtx();
+            }
+            if (this.ctx.state === 'suspended') {
+              this.ctx.resume();
+            }
+            return this.ctx;
+          } catch (e) {
+            return null;
+          }
+        }
+        // 金属スイッチのクリック音
+        playClick(pitch = 1.0) {
+          const ctx = this.ensureCtx();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520 * pitch, now);
+          osc.frequency.exponentialRampToValueAtTime(110 * pitch, now + 0.045);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.055);
+        }
+        // 蒸気噴出音（バンドパスノイズ）
+        playSteam(duration = 0.42) {
+          const ctx = this.ensureCtx();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const bufferSize = Math.floor(ctx.sampleRate * duration);
+          const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1);
+          }
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(2200, now);
+          filter.frequency.exponentialRampToValueAtTime(900, now + duration);
+          filter.Q.value = 1.4;
+
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.14, now + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+          src.connect(filter);
+          filter.connect(gain);
+          gain.connect(ctx.destination);
+          src.start(now);
+        }
+        // 真鍮ベル完了音
+        playBell() {
+          const ctx = this.ensureCtx();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const freqs = [1046.5, 2093, 3160];
+          freqs.forEach((f, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now);
+            const vol = idx === 0 ? 0.12 : (idx === 1 ? 0.05 : 0.025);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.exponentialRampToValueAtTime(0.0008, now + (0.65 - idx * 0.12));
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.7);
+          });
+        }
+        // エラー低音ブザー
+        playError() {
+          const ctx = this.ensureCtx();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(145, now);
+          osc.frequency.linearRampToValueAtTime(115, now + 0.22);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        }
+      }
+
+      const sfx = new MechanicalAudio();
+
+      /* ====================================================================
+         2. APPLICATION STATE & STORAGE
+         ==================================================================== */
+      const state = {
+        activeView: 'factory',
+        activeFurnace: 'image',
+        queueFilter: 'all',
+        sfxEnabled: localStorage.getItem('aether_sfx') !== 'off',
+        animEnabled: localStorage.getItem('aether_anim') !== 'off',
+        isProcessing: false,
+        imgBgMode: 'transparent',
+        files: [], // { id, file, name, size, category, ext, status, resultBlob, resultName, resultSize, resultUrl, resultText, previewThumb, errorMsg, meta }
+        previewItemId: null
+      };
+
+      /* ====================================================================
+         3. UTILITY HELPERS
+         ==================================================================== */
+      function uid() {
+        return 'f_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      }
+
+      function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
+        return (bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + ' ' + sizes[i];
+      }
+
+      function getExtension(filename) {
+        const idx = filename.lastIndexOf('.');
+        return idx > 0 ? filename.slice(idx + 1).toLowerCase() : '';
+      }
+
+      function getBaseName(filename) {
+        const idx = filename.lastIndexOf('.');
+        return idx > 0 ? filename.slice(0, idx) : filename;
+      }
+
+      function detectCategory(file) {
+        const ext = getExtension(file.name);
+        const type = (file.type || '').toLowerCase();
+        const imgExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg', 'avif', 'ico'];
+        const audExts = ['wav', 'mp3', 'm4a', 'ogg', 'webm', 'flac', 'aac', 'opus'];
+        const txtExts = ['txt', 'md', 'markdown', 'html', 'htm', 'json', 'csv', 'tsv', 'xml', 'log', 'js', 'css'];
+
+        if (type.startsWith('image/') || imgExts.includes(ext)) return 'image';
+        if (type.startsWith('audio/') || audExts.includes(ext)) return 'audio';
+        if (type.startsWith('text/') || type.includes('json') || type.includes('csv') || txtExts.includes(ext)) return 'text';
+        return 'unknown';
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        const lampClass = type === 'error' ? 'red' : (type === 'success' ? 'green' : 'on');
+        el.className = 'toast-plate pointer-events-auto rounded-lg px-3.5 py-2.5 flex items-center gap-2.5 text-xs text-[#f3d796] transition-all duration-300 opacity-0 translate-y-2';
+        el.innerHTML = `<span class="lamp ${lampClass} shrink-0"></span><span class="leading-snug">${escapeHtml(message)}</span>`;
+        container.appendChild(el);
+        requestAnimationFrame(() => {
+          el.classList.remove('opacity-0', 'translate-y-2');
+        });
+        setTimeout(() => {
+          el.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => el.remove(), 300);
+        }, 3200);
+      }
+
+      function emitSteamPuffs(count = 5) {
+        if (!state.animEnabled) return;
+        const container = document.getElementById('steamContainer');
+        if (!container) return;
+        for (let i = 0; i < count; i++) {
+          const puff = document.createElement('div');
+          puff.className = 'steam-puff';
+          puff.style.left = (15 + Math.random() * 70) + '%';
+          puff.style.bottom = (5 + Math.random() * 20) + '%';
+          puff.style.animationDelay = (i * 0.08) + 's';
+          container.appendChild(puff);
+          setTimeout(() => puff.remove(), 1400);
+        }
+      }
+
+      function triggerDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }
+
+      /* ====================================================================
+         4. FALLBACK PURE-JS ZIP GENERATOR (CDNオフライン時でもZIP出力可能)
+         ==================================================================== */
+      const crcTable = (() => {
+        const table = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) {
+          let c = n;
+          for (let k = 0; k < 8; k++) {
+            c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+          }
+          table[n] = c >>> 0;
+        }
+        return table;
+      })();
+
+      function crc32(bytes) {
+        let crc = 0xffffffff;
+        for (let i = 0; i < bytes.length; i++) {
+          crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+        }
+        return (crc ^ 0xffffffff) >>> 0;
+      }
+
+      async function buildStoreZip(entries) {
+        // entries: [{ name: string, blob: Blob }]
+        const enc = new TextEncoder();
+        const localParts = [];
+        const centralParts = [];
+        let offset = 0;
+
+        for (const entry of entries) {
+          const nameBytes = enc.encode(entry.name);
+          const dataBytes = new Uint8Array(await entry.blob.arrayBuffer());
+          const crc = crc32(dataBytes);
+          const size = dataBytes.length;
+
+          // Local file header (30 bytes + name)
+          const lh = new ArrayBuffer(30 + nameBytes.length);
+          const lv = new DataView(lh);
+          lv.setUint32(0, 0x04034b50, true);
+          lv.setUint16(4, 20, true);
+          lv.setUint16(6, 0x0800, true); // UTF-8 flag
+          lv.setUint16(8, 0, true); // Store
+          lv.setUint16(10, 0, true);
+          lv.setUint16(12, 0, true);
+          lv.setUint32(14, crc, true);
+          lv.setUint32(18, size, true);
+          lv.setUint32(22, size, true);
+          lv.setUint16(26, nameBytes.length, true);
+          lv.setUint16(28, 0, true);
+          new Uint8Array(lh, 30).set(nameBytes);
+
+          localParts.push(new Uint8Array(lh), dataBytes);
+
+          // Central directory header (46 bytes + name)
+          const ch = new ArrayBuffer(46 + nameBytes.length);
+          const cv = new DataView(ch);
+          cv.setUint32(0, 0x02014b50, true);
+          cv.setUint16(4, 20, true);
+          cv.setUint16(6, 20, true);
+          cv.setUint16(8, 0x0800, true);
+          cv.setUint16(10, 0, true);
+          cv.setUint16(12, 0, true);
+          cv.setUint16(14, 0, true);
+          cv.setUint32(16, crc, true);
+          cv.setUint32(20, size, true);
+          cv.setUint32(24, size, true);
+          cv.setUint16(28, nameBytes.length, true);
+          cv.setUint16(30, 0, true);
+          cv.setUint16(32, 0, true);
+          cv.setUint16(34, 0, true);
+          cv.setUint16(36, 0, true);
+          cv.setUint32(38, 0, true);
+          cv.setUint32(42, offset, true);
+          new Uint8Array(ch, 46).set(nameBytes);
+
+          centralParts.push(new Uint8Array(ch));
+          offset += 30 + nameBytes.length + size;
+        }
+
+        const centralSize = centralParts.reduce((s, a) => s + a.length, 0);
+        const eocd = new ArrayBuffer(22);
+        const ev = new DataView(eocd);
+        ev.setUint32(0, 0x06054b50, true);
+        ev.setUint16(4, 0, true);
+        ev.setUint16(6, 0, true);
+        ev.setUint16(8, entries.length, true);
+        ev.setUint16(10, entries.length, true);
+        ev.setUint32(12, centralSize, true);
+        ev.setUint32(16, offset, true);
+        ev.setUint16(20, 0, true);
+
+        return new Blob([...localParts, ...centralParts, new Uint8Array(eocd)], { type: 'application/zip' });
+      }
+
+      /* ====================================================================
+         5. IMAGE BOILER — CANVAS CONVERSION ENGINE
+         ==================================================================== */
+      async function convertImageItem(item) {
+        const format = document.getElementById('imgFormat').value; // image/webp | image/jpeg | image/png
+        const quality = parseInt(document.getElementById('imgQuality').value, 10) / 100;
+        const targetW = parseInt(document.getElementById('imgWidth').value, 10) || 0;
+        const targetH = parseInt(document.getElementById('imgHeight').value, 10) || 0;
+        const lockAspect = document.getElementById('imgLockAspect').checked;
+        const noUpscale = document.getElementById('imgNoUpscale').checked;
+        const filterType = document.getElementById('imgFilter').value;
+        const brightness = parseInt(document.getElementById('imgBrightness').value, 10);
+        const contrast = parseInt(document.getElementById('imgContrast').value, 10);
+        const customColor = document.getElementById('imgCustomColor').value;
+
+        const imgUrl = URL.createObjectURL(item.file);
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const el = new Image();
+            el.onload = () => resolve(el);
+            el.onerror = () => reject(new Error('画像の読み込みに失敗しました'));
+            el.src = imgUrl;
+          });
+
+          const origW = img.naturalWidth || img.width;
+          const origH = img.naturalHeight || img.height;
+          let outW = origW;
+          let outH = origH;
+
+          if (targetW > 0 && targetH > 0) {
+            if (lockAspect) {
+              const ratio = Math.min(targetW / origW, targetH / origH);
+              outW = Math.max(1, Math.round(origW * ratio));
+              outH = Math.max(1, Math.round(origH * ratio));
+            } else {
+              outW = targetW;
+              outH = targetH;
+            }
+          } else if (targetW > 0) {
+            outW = targetW;
+            outH = lockAspect ? Math.max(1, Math.round(origH * (targetW / origW))) : origH;
+          } else if (targetH > 0) {
+            outH = targetH;
+            outW = lockAspect ? Math.max(1, Math.round(origW * (targetH / origH))) : origW;
+          }
+
+          if (noUpscale && (outW > origW || outH > origH)) {
+            const downRatio = Math.min(1, origW / outW, origH / outH);
+            outW = Math.max(1, Math.round(outW * downRatio));
+            outH = Math.max(1, Math.round(outH * downRatio));
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = outW;
+          canvas.height = outH;
+          const ctx = canvas.getContext('2d');
+
+          // 透過時の背景塗りつぶし決定
+          let fillCol = null;
+          if (state.imgBgMode === 'white') fillCol = '#ffffff';
+          else if (state.imgBgMode === 'black') fillCol = '#000000';
+          else if (state.imgBgMode === 'custom') fillCol = customColor;
+          else if (format === 'image/jpeg') fillCol = '#ffffff'; // JPGは透過不可のため白埋め
+
+          if (fillCol) {
+            ctx.fillStyle = fillCol;
+            ctx.fillRect(0, 0, outW, outH);
+          }
+
+          // 基本補正フィルター（Canvas 2D filter + ピクセル互換フォールバック）
+          const filterParts = [];
+          if (brightness !== 100) filterParts.push(`brightness(${brightness}%)`);
+          if (contrast !== 100) filterParts.push(`contrast(${contrast}%)`);
+          if (filterType === 'grayscale') filterParts.push('grayscale(100%)');
+          else if (filterType === 'sepia') filterParts.push('sepia(100%)');
+          else if (filterType === 'vintage') filterParts.push('sepia(75%) saturate(130%) contrast(108%)');
+          else if (filterType === 'invert') filterParts.push('invert(100%)');
+
+          if ('filter' in ctx && filterParts.length > 0) {
+            ctx.filter = filterParts.join(' ');
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, outW, outH);
+
+          // Safari等の古いctx.filter非対応時フォールバックピクセル補正
+          if (!('filter' in ctx) && (filterType !== 'none' || brightness !== 100 || contrast !== 100)) {
+            const imgData = ctx.getImageData(0, 0, outW, outH);
+            const d = imgData.data;
+            const bFac = brightness / 100;
+            const cFac = contrast / 100;
+            for (let i = 0; i < d.length; i += 4) {
+              let r = ((d[i] * bFac - 128) * cFac + 128);
+              let g = ((d[i + 1] * bFac - 128) * cFac + 128);
+              let b = ((d[i + 2] * bFac - 128) * cFac + 128);
+              if (filterType === 'grayscale') {
+                const avg = 0.299 * r + 0.587 * g + 0.114 * b;
+                r = g = b = avg;
+              } else if (filterType === 'sepia' || filterType === 'vintage') {
+                const tr = 0.393 * r + 0.769 * g + 0.189 * b;
+                const tg = 0.349 * r + 0.686 * g + 0.168 * b;
+                const tb = 0.272 * r + 0.534 * g + 0.131 * b;
+                r = tr; g = tg; b = tb;
+              } else if (filterType === 'invert') {
+                r = 255 - r; g = 255 - g; b = 255 - b;
+              }
+              d[i] = Math.max(0, Math.min(255, r));
+              d[i + 1] = Math.max(0, Math.min(255, g));
+              d[i + 2] = Math.max(0, Math.min(255, b));
+            }
+            ctx.putImageData(imgData, 0, 0);
+          }
+
+          const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob(
+              (b) => b ? resolve(b) : reject(new Error('画像エンコードに失敗しました')),
+              format,
+              format === 'image/png' ? undefined : quality
+            );
+          });
+
+          const extMap = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
+          return {
+            blob,
+            name: `${getBaseName(item.name)}.${extMap[format]}`,
+            meta: `${origW}x${origH} -> ${outW}x${outH} px`
+          };
+        } finally {
+          URL.revokeObjectURL(imgUrl);
+        }
+      }
+
+      /* ====================================================================
+         6. ACOUSTIC TURBINE — WEB AUDIO DSP & ENCODER
+         ==================================================================== */
+      function getSupportedCompressedAudioMime() {
+        if (typeof MediaRecorder === 'undefined') return null;
+        const candidates = [
+          { mime: 'audio/webm;codecs=opus', ext: 'webm', label: 'WebM (Opus)' },
+          { mime: 'audio/ogg;codecs=opus', ext: 'ogg', label: 'OGG (Opus)' },
+          { mime: 'audio/webm', ext: 'webm', label: 'WebM' },
+          { mime: 'audio/mp4', ext: 'm4a', label: 'MP4 Audio' }
+        ];
+        for (const c of candidates) {
+          if (MediaRecorder.isTypeSupported(c.mime)) return c;
+        }
+        return null;
+      }
+
+      function encodeWav16(audioBuffer) {
+        const numCh = audioBuffer.numberOfChannels;
+        const sampleRate = audioBuffer.sampleRate;
+        const numFrames = audioBuffer.length;
+        const bytesPerSample = 2;
+        const blockAlign = numCh * bytesPerSample;
+        const dataSize = numFrames * blockAlign;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+
+        const writeStr = (offset, str) => {
+          for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+        };
+
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + dataSize, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true); // PCM chunk size
+        view.setUint16(20, 1, true); // PCM format
+        view.setUint16(22, numCh, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * blockAlign, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, 16, true); // 16-bit
+        writeStr(36, 'data');
+        view.setUint32(40, dataSize, true);
+
+        const channels = [];
+        for (let ch = 0; ch < numCh; ch++) channels.push(audioBuffer.getChannelData(ch));
+
+        let offset = 44;
+        for (let i = 0; i < numFrames; i++) {
+          for (let ch = 0; ch < numCh; ch++) {
+            let s = Math.max(-1, Math.min(1, channels[ch][i]));
+            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+            offset += 2;
+          }
+        }
+        return new Blob([buffer], { type: 'audio/wav' });
+      }
+
+      async function encodeCompressedViaRecorder(audioBuffer, codecInfo) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx({ sampleRate: audioBuffer.sampleRate });
+        try {
+          if (ctx.state === 'suspended') await ctx.resume();
+          const dest = ctx.createMediaStreamDestination();
+          const src = ctx.createBufferSource();
+          src.buffer = audioBuffer;
+          src.connect(dest);
+
+          const recorder = new MediaRecorder(dest.stream, { mimeType: codecInfo.mime });
+          const chunks = [];
+
+          const recordedBlob = await new Promise((resolve, reject) => {
+            recorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
+            recorder.onerror = () => reject(new Error('圧縮音声のエンコード中にエラーが発生しました'));
+            recorder.onstop = () => resolve(new Blob(chunks, { type: codecInfo.mime }));
+
+            src.onended = () => {
+              setTimeout(() => {
+                if (recorder.state !== 'inactive') recorder.stop();
+              }, 80);
+            };
+
+            recorder.start();
+            src.start(0);
+          });
+          return recordedBlob;
+        } finally {
+          await ctx.close();
+        }
+      }
+
+      async function convertAudioItem(item) {
+        const outFormat = document.getElementById('audFormat').value; // wav | compressed
+        const chMode = document.getElementById('audChannels').value; // keep | 1 | 2
+        const targetSr = parseInt(document.getElementById('audSampleRate').value, 10);
+        const doTrim = document.getElementById('audTrimSilence').checked;
+        const trimDb = parseFloat(document.getElementById('audTrimDb').value);
+        const fadeInSec = parseFloat(document.getElementById('audFadeIn').value);
+        const fadeOutSec = parseFloat(document.getElementById('audFadeOut').value);
+        const doNormalize = document.getElementById('audNormalize').checked;
+        const targetPeakDb = parseFloat(document.getElementById('audNormDb').value);
+
+        const arrayBuf = await item.file.arrayBuffer();
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const decodeCtx = new AudioCtx();
+        let decoded;
+        try {
+          decoded = await decodeCtx.decodeAudioData(arrayBuf.slice(0));
+        } catch (err) {
+          throw new Error('このブラウザでは対応していない音声コーデックです');
+        } finally {
+          await decodeCtx.close();
+        }
+
+        // チャンネル数決定
+        const targetCh = chMode === 'keep' ? Math.min(2, decoded.numberOfChannels) : parseInt(chMode, 10);
+        const newLength = Math.max(1, Math.ceil(decoded.duration * targetSr));
+
+        // OfflineAudioContext による高品質リサンプリング＆チャンネル変換
+        const offlineCtx = new OfflineAudioContext(targetCh, newLength, targetSr);
+        const srcNode = offlineCtx.createBufferSource();
+        srcNode.buffer = decoded;
+        srcNode.connect(offlineCtx.destination);
+        srcNode.start(0);
+        let rendered = await offlineCtx.startRendering();
+
+        // Float32配列抽出してDSP処理
+        let chData = [];
+        for (let c = 0; c < rendered.numberOfChannels; c++) {
+          chData.push(new Float32Array(rendered.getChannelData(c)));
+        }
+
+        // 1. 前後無音トリミング
+        let startIdx = 0;
+        let endIdx = chData[0].length - 1;
+        if (doTrim) {
+          const threshold = Math.pow(10, trimDb / 20);
+          let foundStart = -1;
+          let foundEnd = -1;
+          for (let i = 0; i < chData[0].length; i++) {
+            let amp = 0;
+            for (let c = 0; c < chData.length; c++) {
+              const a = Math.abs(chData[c][i]);
+              if (a > amp) amp = a;
+            }
+            if (amp >= threshold) {
+              if (foundStart === -1) foundStart = i;
+              foundEnd = i;
+            }
+          }
+          if (foundStart !== -1 && foundEnd > foundStart) {
+            const pad = Math.floor(targetSr * 0.015); // 15msの安全な余白
+            startIdx = Math.max(0, foundStart - pad);
+            endIdx = Math.min(chData[0].length - 1, foundEnd + pad);
+          }
+        }
+
+        const slicedLen = Math.max(1, endIdx - startIdx + 1);
+        const processed = chData.map(arr => arr.slice(startIdx, endIdx + 1));
+
+        // 2. 音量ノーマライズ
+        if (doNormalize) {
+          let peak = 0;
+          for (let c = 0; c < processed.length; c++) {
+            for (let i = 0; i < slicedLen; i++) {
+              const a = Math.abs(processed[c][i]);
+              if (a > peak) peak = a;
+            }
+          }
+          if (peak > 1e-6) {
+            const targetLin = Math.pow(10, targetPeakDb / 20);
+            const gain = targetLin / peak;
+            for (let c = 0; c < processed.length; c++) {
+              for (let i = 0; i < slicedLen; i++) {
+                processed[c][i] = Math.max(-1, Math.min(1, processed[c][i] * gain));
+              }
+            }
+          }
+        }
+
+        // 3. フェードイン / フェードアウト
+        const fiSamples = Math.min(slicedLen, Math.floor(fadeInSec * targetSr));
+        const foSamples = Math.min(slicedLen, Math.floor(fadeOutSec * targetSr));
+        if (fiSamples > 0) {
+          for (let i = 0; i < fiSamples; i++) {
+            const mult = i / fiSamples;
+            for (let c = 0; c < processed.length; c++) processed[c][i] *= mult;
+          }
+        }
+        if (foSamples > 0) {
+          for (let i = 0; i < foSamples; i++) {
+            const mult = (foSamples - i) / foSamples;
+            const idx = slicedLen - foSamples + i;
+            for (let c = 0; c < processed.length; c++) processed[c][idx] *= mult;
+          }
+        }
+
+        // 最終AudioBuffer組み立て
+        const finalCtx = new OfflineAudioContext(processed.length, slicedLen, targetSr);
+        const finalBuffer = finalCtx.createBuffer(processed.length, slicedLen, targetSr);
+        for (let c = 0; c < processed.length; c++) {
+          finalBuffer.copyToChannel(processed[c], c);
+        }
+
+        const durSec = (slicedLen / targetSr).toFixed(2);
+        const chStr = processed.length === 1 ? 'Mono' : 'Stereo';
+
+        if (outFormat === 'compressed') {
+          const codec = getSupportedCompressedAudioMime();
+          if (codec) {
+            const blob = await encodeCompressedViaRecorder(finalBuffer, codec);
+            return {
+              blob,
+              name: `${getBaseName(item.name)}.${codec.ext}`,
+              meta: `${codec.label} / ${targetSr}Hz / ${chStr} / ${durSec}s`
+            };
+          } else {
+            showToast('このブラウザはOGG/WebM書き出し非対応のためWAVで出力しました', 'info');
+          }
+        }
+
+        const wavBlob = encodeWav16(finalBuffer);
+        return {
+          blob: wavBlob,
+          name: `${getBaseName(item.name)}.wav`,
+          meta: `WAV 16-bit / ${targetSr}Hz / ${chStr} / ${durSec}s`
+        };
+      }
+
+      /* ====================================================================
+         7. TEXT & DATA PRESS — PARSER, CONVERTER & ENCODER
+         ==================================================================== */
+      async function decodeTextBytes(arrayBuffer, encMode) {
+        const bytes = new Uint8Array(arrayBuffer);
+        // BOMチェック
+        if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+          return new TextDecoder('utf-16le').decode(bytes.subarray(2));
+        }
+        if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+          return new TextDecoder('utf-16be').decode(bytes.subarray(2));
+        }
+        if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+          return new TextDecoder('utf-8').decode(bytes.subarray(3));
+        }
+
+        if (encMode !== 'auto') {
+          return new TextDecoder(encMode).decode(bytes);
+        }
+
+        // 自動判定: まず厳密なUTF-8を試し、失敗したらShift-JISへフォールバック
+        try {
+          return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        } catch (e) {
+          try {
+            return new TextDecoder('shift_jis').decode(bytes);
+          } catch (e2) {
+            return new TextDecoder('utf-8').decode(bytes);
+          }
+        }
+      }
+
+      function encodeTextBlob(text, outputEnc, mimeType) {
+        if (outputEnc === 'utf-16le-bom') {
+          const buf = new ArrayBuffer(2 + text.length * 2);
+          const view = new DataView(buf);
+          view.setUint8(0, 0xff);
+          view.setUint8(1, 0xfe);
+          for (let i = 0; i < text.length; i++) {
+            view.setUint16(2 + i * 2, text.charCodeAt(i), true);
+          }
+          return new Blob([buf], { type: mimeType });
+        }
+        const utf8Bytes = new TextEncoder().encode(text);
+        if (outputEnc === 'utf-8-bom') {
+          const bom = new Uint8Array([0xef, 0xbb, 0xbf]);
+          return new Blob([bom, utf8Bytes], { type: mimeType });
+        }
+        return new Blob([utf8Bytes], { type: mimeType });
+      }
+
+      // RFC4180準拠CSVパーサー
+      function parseCSV(text) {
+        const rows = [];
+        let row = [];
+        let cell = '';
+        let inQuotes = false;
+        const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+        for (let i = 0; i < normalized.length; i++) {
+          const ch = normalized[i];
+          const next = normalized[i + 1];
+          if (inQuotes) {
+            if (ch === '"' && next === '"') {
+              cell += '"';
+              i++;
+            } else if (ch === '"') {
+              inQuotes = false;
+            } else {
+              cell += ch;
+            }
+          } else {
+            if (ch === '"') {
+              inQuotes = true;
+            } else if (ch === ',') {
+              row.push(cell);
+              cell = '';
+            } else if (ch === '\n') {
+              row.push(cell);
+              rows.push(row);
+              row = [];
+              cell = '';
+            } else {
+              cell += ch;
+            }
+          }
+        }
+        if (cell.length > 0 || row.length > 0) {
+          row.push(cell);
+          rows.push(row);
+        }
+        return rows.filter(r => !(r.length === 1 && r[0].trim() === ''));
+      }
+
+      function toCSV(rows) {
+        return rows.map(r => r.map(v => {
+          const s = v === null || v === undefined ? '' : String(v);
+          if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+          return s;
+        }).join(',')).join('\n');
+      }
+
+      function csvToObjects(rows) {
+        if (rows.length === 0) return [];
+        const headers = rows[0].map((h, idx) => h.trim() || `col_${idx + 1}`);
+        return rows.slice(1).map(r => {
+          const obj = {};
+          headers.forEach((h, i) => {
+            const raw = r[i] !== undefined ? r[i] : '';
+            // 数値・真偽値の自然な復元（先頭0のコードは文字列維持）
+            if (/^-?(0|[1-9]\d*)(\.\d+)?$/.test(raw.trim())) obj[h] = Number(raw.trim());
+            else if (raw.trim() === 'true') obj[h] = true;
+            else if (raw.trim() === 'false') obj[h] = false;
+            else obj[h] = raw;
+          });
+          return obj;
+        });
+      }
+
+      function jsonToRows(parsed) {
+        let arr = Array.isArray(parsed) ? parsed : [parsed];
+        if (arr.length === 0) return [['value']];
+        if (typeof arr[0] !== 'object' || arr[0] === null) {
+          return [['value'], ...arr.map(v => [String(v)])];
+        }
+        const keySet = new Set();
+        arr.forEach(item => {
+          if (item && typeof item === 'object') Object.keys(item).forEach(k => keySet.add(k));
+        });
+        const keys = Array.from(keySet);
+        const rows = [keys];
+        arr.forEach(item => {
+          rows.push(keys.map(k => {
+            const val = item && typeof item === 'object' ? item[k] : '';
+            if (val !== null && typeof val === 'object') return JSON.stringify(val);
+            return val === undefined || val === null ? '' : String(val);
+          }));
+        });
+        return rows;
+      }
+
+      function rowsToMarkdownTable(rows) {
+        if (!rows.length) return '';
+        const header = rows[0];
+        const sep = header.map(() => '---');
+        const body = rows.slice(1);
+        const fmt = r => '| ' + r.map(c => String(c).replace(/\|/g, '\\|').replace(/\n/g, '<br>')).join(' | ') + ' |';
+        return [fmt(header), fmt(sep), ...body.map(fmt)].join('\n');
+      }
+
+      function rowsToHtmlTable(rows) {
+        if (!rows.length) return '<table></table>';
+        const th = rows[0].map(c => `<th>${escapeHtml(c)}</th>`).join('');
+        const tb = rows.slice(1).map(r => `<tr>${r.map(c => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`).join('\n');
+        return `<table>\n<thead><tr>${th}</tr></thead>\n<tbody>\n${tb}\n</tbody>\n</table>`;
+      }
+
+      // Markdown -> HTML レンダラー
+      function markdownToHtmlBody(md) {
+        const lines = md.replace(/\r\n/g, '\n').split('\n');
+        let html = [];
+        let inCode = false;
+        let codeLang = '';
+        let inUl = false;
+        let inOl = false;
+
+        const closeLists = () => {
+          if (inUl) { html.push('</ul>'); inUl = false; }
+          if (inOl) { html.push('</ol>'); inOl = false; }
+        };
+
+        const inlineFmt = (str) => {
+          let s = escapeHtml(str);
+          s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+          s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+          s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+          s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+          return s;
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.trim().startsWith('```')) {
+            closeLists();
+            if (!inCode) {
+              inCode = true;
+              codeLang = escapeHtml(line.trim().slice(3).trim());
+              html.push(`<pre><code class="lang-${codeLang}">`);
+            } else {
+              inCode = false;
+              html.push('</code></pre>');
+            }
+            continue;
+          }
+          if (inCode) {
+            html.push(escapeHtml(line) + '\n');
+            continue;
+          }
+
+          const trimmed = line.trim();
+          if (!trimmed) {
+            closeLists();
+            continue;
+          }
+          if (/^(-{3,}|\*{3,})$/.test(trimmed)) {
+            closeLists();
+            html.push('<hr>');
+            continue;
+          }
+          const hMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+          if (hMatch) {
+            closeLists();
+            const lvl = hMatch[1].length;
+            html.push(`<h${lvl}>${inlineFmt(hMatch[2])}</h${lvl}>`);
+            continue;
+          }
+          if (trimmed.startsWith('> ')) {
+            closeLists();
+            html.push(`<blockquote>${inlineFmt(trimmed.slice(2))}</blockquote>`);
+            continue;
+          }
+          const ulMatch = trimmed.match(/^[-*+]\s+(.*)$/);
+          if (ulMatch) {
+            if (inOl) { html.push('</ol>'); inOl = false; }
+            if (!inUl) { html.push('<ul>'); inUl = true; }
+            html.push(`<li>${inlineFmt(ulMatch[1])}</li>`);
+            continue;
+          }
+          const olMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+          if (olMatch) {
+            if (inUl) { html.push('</ul>'); inUl = false; }
+            if (!inOl) { html.push('<ol>'); inOl = true; }
+            html.push(`<li>${inlineFmt(olMatch[1])}</li>`);
+            continue;
+          }
+
+          // Markdownテーブル検出
+          if (trimmed.includes('|') && i + 1 < lines.length && /^\s*\|?[\s:-]+\|[\s|:-]*$/.test(lines[i + 1])) {
+            closeLists();
+            const parseRow = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+            const headerCells = parseRow(line);
+            i += 2;
+            const bodyRows = [];
+            while (i < lines.length && lines[i].trim().includes('|')) {
+              bodyRows.push(parseRow(lines[i]));
+              i++;
+            }
+            i--;
+            html.push('<table><thead><tr>' + headerCells.map(c => `<th>${inlineFmt(c)}</th>`).join('') + '</tr></thead><tbody>');
+            bodyRows.forEach(br => {
+              html.push('<tr>' + br.map(c => `<td>${inlineFmt(c)}</td>`).join('') + '</tr>');
+            });
+            html.push('</tbody></table>');
+            continue;
+          }
+
+          closeLists();
+          html.push(`<p>${inlineFmt(trimmed)}</p>`);
+        }
+        closeLists();
+        if (inCode) html.push('</code></pre>');
+        return html.join('\n');
+      }
+
+      function wrapHtmlDocument(title, bodyHtml) {
+        return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif; line-height: 1.75; max-width: 820px; margin: 2rem auto; padding: 0 1.25rem; color: #1f2328; background: #ffffff; }
+    h1, h2, h3 { border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3rem; margin-top: 1.8rem; }
+    code { background: #f3f4f6; padding: 0.15rem 0.35rem; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+    pre { background: #16181d; color: #e6edf3; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+    pre code { background: transparent; padding: 0; color: inherit; }
+    blockquote { border-left: 4px solid #b38336; margin: 1rem 0; padding: 0.25rem 1rem; color: #57606a; background: #faf8f5; }
+    table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; }
+    th, td { border: 1px solid #d0d7de; padding: 0.5rem 0.75rem; text-align: left; }
+    th { background: #f6f8fa; }
+  </style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`;
+      }
+
+      function htmlToMarkdown(htmlStr) {
+        const doc = new DOMParser().parseFromString(htmlStr, 'text/html');
+        const walk = (node) => {
+          if (node.nodeType === Node.TEXT_NODE) return node.nodeValue;
+          if (node.nodeType !== Node.ELEMENT_NODE) return '';
+          const tag = node.tagName.toLowerCase();
+          if (tag === 'script' || tag === 'style') return '';
+          const inner = Array.from(node.childNodes).map(walk).join('');
+          switch (tag) {
+            case 'h1': return `\n# ${inner.trim()}\n\n`;
+            case 'h2': return `\n## ${inner.trim()}\n\n`;
+            case 'h3': return `\n### ${inner.trim()}\n\n`;
+            case 'h4': return `\n#### ${inner.trim()}\n\n`;
+            case 'p': return `\n${inner.trim()}\n\n`;
+            case 'br': return '\n';
+            case 'hr': return '\n---\n\n';
+            case 'strong': case 'b': return `**${inner}**`;
+            case 'em': case 'i': return `*${inner}*`;
+            case 'code': return node.parentElement && node.parentElement.tagName.toLowerCase() === 'pre' ? inner : `\`${inner}\``;
+            case 'pre': return `\n\`\`\`\n${inner.trim()}\n\`\`\`\n\n`;
+            case 'blockquote': return `\n> ${inner.trim().replace(/\n/g, '\n> ')}\n\n`;
+            case 'li': return `- ${inner.trim()}\n`;
+            case 'ul': case 'ol': return `\n${inner}\n`;
+            case 'a': return `[${inner}](${node.getAttribute('href') || ''})`;
+            default: return inner;
+          }
+        };
+        return walk(doc.body).replace(/\n{3,}/g, '\n\n').trim();
+      }
+
+      function htmlToPlainText(htmlStr) {
+        const doc = new DOMParser().parseFromString(htmlStr, 'text/html');
+        doc.querySelectorAll('script, style').forEach(el => el.remove());
+        return (doc.body.innerText || doc.body.textContent || '').trim();
+      }
+
+      function stripMarkdownSyntax(md) {
+        return md
+          .replace(/```[\s\S]*?```/g, m => m.replace(/```[^\n]*\n?|\n?```/g, ''))
+          .replace(/^#{1,6}\s+/gm, '')
+          .replace(/\*\*([^*]+)\*\*/g, '$1')
+          .replace(/\*([^*]+)\*/g, '$1')
+          .replace(/`([^`]+)`/g, '$1')
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/^>\s?/gm, '');
+      }
+
+      async function convertTextItem(item) {
+        const targetFmt = document.getElementById('txtFormat').value; // txt | md | html | json | csv
+        const jsonStyle = document.getElementById('txtJsonStyle').value;
+        const inputEnc = document.getElementById('txtInputEnc').value;
+        const outputEnc = document.getElementById('txtOutputEnc').value;
+        const lineEnding = document.getElementById('txtLineEnding').value;
+        const trimTrailing = document.getElementById('txtTrimTrailing').checked;
+        const collapseBlanks = document.getElementById('txtCollapseBlanks').checked;
+        const fullwidthSpace = document.getElementById('txtFullwidthSpace').checked;
+        const stripEdges = document.getElementById('txtStripEdges').checked;
+
+        const srcExt = item.ext === 'markdown' ? 'md' : (item.ext === 'htm' ? 'html' : (item.ext || 'txt'));
+        const rawBuf = await item.file.arrayBuffer();
+        let text = await decodeTextBytes(rawBuf, inputEnc);
+
+        // 内部処理用に改行をLFへ一旦統一
+        text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+        // 事前整理
+        if (fullwidthSpace) text = text.replace(/\u3000/g, ' ');
+        if (trimTrailing) text = text.replace(/[ \t]+$/gm, '');
+        if (collapseBlanks) text = text.replace(/\n{3,}/g, '\n\n');
+        if (stripEdges) text = text.trim();
+
+        const baseName = getBaseName(item.name);
+        let result = text;
+
+        // フォーマット相互変換ルーター
+        if (targetFmt === 'json') {
+          let parsedObj;
+          if (srcExt === 'json') {
+            parsedObj = JSON.parse(text);
+          } else if (srcExt === 'csv' || srcExt === 'tsv') {
+            const csvText = srcExt === 'tsv' ? text.replace(/\t/g, ',') : text;
+            parsedObj = csvToObjects(parseCSV(csvText));
+          } else if (srcExt === 'html') {
+            const plain = htmlToPlainText(text);
+            parsedObj = { title: baseName, lines: plain.split('\n').filter(Boolean) };
+          } else {
+            // TXT / MD -> 行配列構造JSON
+            parsedObj = { source: item.name, lines: text.split('\n') };
+          }
+          const indent = jsonStyle === 'minify' ? 0 : (jsonStyle === 'pretty4' ? 4 : 2);
+          result = JSON.stringify(parsedObj, null, indent);
+
+        } else if (targetFmt === 'csv') {
+          if (srcExt === 'csv') {
+            result = toCSV(parseCSV(text));
+          } else if (srcExt === 'tsv') {
+            result = toCSV(text.split('\n').map(l => l.split('\t')));
+          } else if (srcExt === 'json') {
+            const parsed = JSON.parse(text);
+            result = toCSV(jsonToRows(parsed));
+          } else {
+            const plain = srcExt === 'html' ? htmlToPlainText(text) : text;
+            const rows = [['line', 'content'], ...plain.split('\n').map((l, idx) => [idx + 1, l])];
+            result = toCSV(rows);
+          }
+
+        } else if (targetFmt === 'html') {
+          if (srcExt === 'html') {
+            result = text;
+          } else if (srcExt === 'md') {
+            result = wrapHtmlDocument(baseName, markdownToHtmlBody(text));
+          } else if (srcExt === 'csv') {
+            result = wrapHtmlDocument(baseName, `<h1>${escapeHtml(baseName)}</h1>\n` + rowsToHtmlTable(parseCSV(text)));
+          } else if (srcExt === 'json') {
+            const parsed = JSON.parse(text);
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+              result = wrapHtmlDocument(baseName, `<h1>${escapeHtml(baseName)}</h1>\n` + rowsToHtmlTable(jsonToRows(parsed)));
+            } else {
+              result = wrapHtmlDocument(baseName, `<h1>${escapeHtml(baseName)}</h1>\n<pre><code>${escapeHtml(JSON.stringify(parsed, null, 2))}</code></pre>`);
+            }
+          } else {
+            const paras = text.split(/\n{2,}/).map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('\n');
+            result = wrapHtmlDocument(baseName, paras);
+          }
+
+        } else if (targetFmt === 'md') {
+          if (srcExt === 'md') {
+            result = text;
+          } else if (srcExt === 'html') {
+            result = htmlToMarkdown(text);
+          } else if (srcExt === 'csv') {
+            result = `# ${baseName}\n\n` + rowsToMarkdownTable(parseCSV(text));
+          } else if (srcExt === 'json') {
+            const parsed = JSON.parse(text);
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+              result = `# ${baseName}\n\n` + rowsToMarkdownTable(jsonToRows(parsed));
+            } else {
+              result = `# ${baseName}\n\n\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\``;
+            }
+          } else {
+            result = text;
+          }
+
+        } else {
+          // targetFmt === 'txt'
+          if (srcExt === 'html') {
+            result = htmlToPlainText(text);
+          } else if (srcExt === 'md') {
+            result = stripMarkdownSyntax(text);
+          } else if (srcExt === 'json') {
+            const parsed = JSON.parse(text);
+            result = JSON.stringify(parsed, null, 2);
+          } else if (srcExt === 'csv') {
+            result = parseCSV(text).map(r => r.join('\t')).join('\n');
+          } else {
+            result = text;
+          }
+        }
+
+        // 最終クリーンアップ & 改行コード適用
+        if (trimTrailing) result = result.replace(/[ \t]+$/gm, '');
+        if (collapseBlanks) result = result.replace(/\n{3,}/g, '\n\n');
+        if (stripEdges) result = result.trim();
+
+        const eol = lineEnding === 'crlf' ? '\r\n' : (lineEnding === 'cr' ? '\r' : '\n');
+        result = result.replace(/\r\n|\r|\n/g, eol);
+
+        const mimeMap = {
+          txt: 'text/plain;charset=utf-8',
+          md: 'text/markdown;charset=utf-8',
+          html: 'text/html;charset=utf-8',
+          json: 'application/json;charset=utf-8',
+          csv: 'text/csv;charset=utf-8'
+        };
+
+        const blob = encodeTextBlob(result, outputEnc, mimeMap[targetFmt]);
+        const lineCount = result ? result.split(eol).length : 0;
+        return {
+          blob,
+          name: `${baseName}.${targetFmt}`,
+          text: result,
+          meta: `${srcExt.toUpperCase()} -> ${targetFmt.toUpperCase()} / ${outputEnc.toUpperCase()} / ${lineEnding.toUpperCase()} / ${lineCount}行`
+        };
+      }
+
+      /* ====================================================================
+         8. PRESETS DEFINITIONS (実用ワンクリックプリセット)
+         ==================================================================== */
+      function applyPreset(presetId) {
+        sfx.playClick(1.2);
+        emitSteamPuffs(3);
+
+        switch (presetId) {
+          // Image Presets
+          case 'img-web-opt':
+            document.getElementById('imgFormat').value = 'image/webp';
+            document.getElementById('imgQuality').value = 82;
+            document.getElementById('imgWidth').value = 1280;
+            document.getElementById('imgHeight').value = '';
+            document.getElementById('imgLockAspect').checked = true;
+            document.getElementById('imgNoUpscale').checked = true;
+            setImgBgMode('transparent');
+            document.getElementById('imgFilter').value = 'none';
+            document.getElementById('imgBrightness').value = 100;
+            document.getElementById('imgContrast').value = 100;
+            showToast('プリセット適用: Web軽量化 (WEBP 82% / 最大幅1280px)');
+            break;
+          case 'img-jpg-white':
+            document.getElementById('imgFormat').value = 'image/jpeg';
+            document.getElementById('imgQuality').value = 90;
+            document.getElementById('imgWidth').value = '';
+            document.getElementById('imgHeight').value = '';
+            setImgBgMode('white');
+            document.getElementById('imgFilter').value = 'none';
+            document.getElementById('imgBrightness').value = 100;
+            document.getElementById('imgContrast').value = 100;
+            showToast('プリセット適用: 白背景JPG化 (JPG 90%)');
+            break;
+          case 'img-png-lossless':
+            document.getElementById('imgFormat').value = 'image/png';
+            document.getElementById('imgQuality').value = 100;
+            document.getElementById('imgWidth').value = '';
+            document.getElementById('imgHeight').value = '';
+            setImgBgMode('transparent');
+            document.getElementById('imgFilter').value = 'none';
+            document.getElementById('imgBrightness').value = 100;
+            document.getElementById('imgContrast').value = 100;
+            showToast('プリセット適用: 透過PNG統一 (原寸・劣化なし)');
+            break;
+          case 'img-vintage-sepia':
+            document.getElementById('imgFormat').value = 'image/jpeg';
+            document.getElementById('imgQuality').value = 88;
+            setImgBgMode('black');
+            document.getElementById('imgFilter').value = 'vintage';
+            document.getElementById('imgBrightness').value = 96;
+            document.getElementById('imgContrast').value = 112;
+            showToast('プリセット適用: アンティーク・アンバー調');
+            break;
+
+          // Audio Presets
+          case 'aud-master-wav':
+            document.getElementById('audFormat').value = 'wav';
+            document.getElementById('audChannels').value = 'keep';
+            document.getElementById('audSampleRate').value = '44100';
+            document.getElementById('audTrimSilence').checked = true;
+            document.getElementById('audTrimDb').value = -42;
+            document.getElementById('audFadeIn').value = 0.0;
+            document.getElementById('audFadeOut').value = 0.2;
+            document.getElementById('audNormalize').checked = true;
+            document.getElementById('audNormDb').value = -1;
+            showToast('プリセット適用: 高音質WAV整音 (44.1kHz / 無音切 / -1dB)');
+            break;
+          case 'aud-light-webm':
+            document.getElementById('audFormat').value = 'compressed';
+            document.getElementById('audChannels').value = '2';
+            document.getElementById('audSampleRate').value = '44100';
+            document.getElementById('audTrimSilence').checked = false;
+            document.getElementById('audFadeIn').value = 0;
+            document.getElementById('audFadeOut').value = 0;
+            document.getElementById('audNormalize').checked = true;
+            document.getElementById('audNormDb').value = -1;
+            showToast('プリセット適用: 軽量圧縮出力 (WebM/OGG)');
+            break;
+          case 'aud-voice-mono':
+            document.getElementById('audFormat').value = 'wav';
+            document.getElementById('audChannels').value = '1';
+            document.getElementById('audSampleRate').value = '22050';
+            document.getElementById('audTrimSilence').checked = true;
+            document.getElementById('audTrimDb').value = -36;
+            document.getElementById('audFadeIn').value = 0.1;
+            document.getElementById('audFadeOut').value = 0.2;
+            document.getElementById('audNormalize').checked = true;
+            document.getElementById('audNormDb').value = -1.5;
+            showToast('プリセット適用: ボイスメモ軽量化 (Mono 22kHz / 無音カット)');
+            break;
+          case 'aud-lofi-radio':
+            document.getElementById('audFormat').value = 'wav';
+            document.getElementById('audChannels').value = '1';
+            document.getElementById('audSampleRate').value = '11025';
+            document.getElementById('audTrimSilence').checked = false;
+            document.getElementById('audFadeIn').value = 0.5;
+            document.getElementById('audFadeOut').value = 0.8;
+            document.getElementById('audNormalize').checked = true;
+            document.getElementById('audNormDb').value = -2;
+            showToast('プリセット適用: レトロ蓄音機風 (11kHz Mono)');
+            break;
+
+          // Text Presets
+          case 'txt-md-html':
+            document.getElementById('txtFormat').value = 'html';
+            document.getElementById('txtOutputEnc').value = 'utf-8';
+            document.getElementById('txtLineEnding').value = 'lf';
+            document.getElementById('txtTrimTrailing').checked = true;
+            document.getElementById('txtCollapseBlanks').checked = true;
+            document.getElementById('txtStripEdges').checked = true;
+            showToast('プリセット適用: Markdown → HTML文書出力');
+            break;
+          case 'txt-csv-json':
+            document.getElementById('txtFormat').value = 'json';
+            document.getElementById('txtJsonStyle').value = 'pretty2';
+            document.getElementById('txtOutputEnc').value = 'utf-8';
+            document.getElementById('txtLineEnding').value = 'lf';
+            showToast('プリセット適用: CSV → 整形JSON変換');
+            break;
+          case 'txt-json-csv':
+            document.getElementById('txtFormat').value = 'csv';
+            document.getElementById('txtOutputEnc').value = 'utf-8-bom';
+            document.getElementById('txtLineEnding').value = 'crlf';
+            showToast('プリセット適用: JSON → Excel向けCSV (BOM付 / CRLF)');
+            break;
+          case 'txt-clean-plain':
+            document.getElementById('txtFormat').value = 'txt';
+            document.getElementById('txtOutputEnc').value = 'utf-8';
+            document.getElementById('txtLineEnding').value = 'lf';
+            document.getElementById('txtTrimTrailing').checked = true;
+            document.getElementById('txtCollapseBlanks').checked = true;
+            document.getElementById('txtFullwidthSpace').checked = true;
+            document.getElementById('txtStripEdges').checked = true;
+            showToast('プリセット適用: テキスト徹底整形 (空白・改行整理)');
+            break;
+        }
+        syncSliderReadouts();
+      }
+
+      /* ====================================================================
+         9. TEST SAMPLE GENERATOR (動作確認用ローカル素材生成)
+         ==================================================================== */
+      async function injectTestSamples() {
+        sfx.playClick(0.95);
+        // 1. テスト画像（透過PNG: 真鍮歯車エンブレム）
+        const c = document.createElement('canvas');
+        c.width = 640;
+        c.height = 400;
+        const ctx = c.getContext('2d');
+        // 透過背景に円形エンブレム描画
+        const grad = ctx.createRadialGradient(320, 200, 20, 320, 200, 170);
+        grad.addColorStop(0, '#f3d796');
+        grad.addColorStop(0.6, '#b38336');
+        grad.addColorStop(1, '#3b2810');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(320, 200, 165, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = '#ff9c2a';
+        ctx.stroke();
+        ctx.fillStyle = '#14100d';
+        ctx.font = 'bold 42px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('AETHER FORGE', 320, 195);
+        ctx.font = '22px monospace';
+        ctx.fillStyle = '#291c0d';
+        ctx.fillText('TRANSPARENT PNG SAMPLE', 320, 235);
+
+        const pngBlob = await new Promise(res => c.toBlob(res, 'image/png'));
+        const imgFile = new File([pngBlob], 'sample-emblem.png', { type: 'image/png' });
+
+        // 2. テスト音声（前後無音付き・オルゴール風和音WAV）
+        const sr = 44100;
+        const dur = 2.6;
+        const len = Math.floor(sr * dur);
+        const off = new OfflineAudioContext(2, len, sr);
+        const buf = off.createBuffer(2, len, sr);
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        for (let ch = 0; ch < 2; ch++) {
+          const data = buf.getChannelData(ch);
+          for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            // 前後0.4秒は無音にしてトリミングテスト可能に
+            if (t < 0.4 || t > 2.2) {
+              data[i] = 0;
+              continue;
+            }
+            const lt = t - 0.4;
+            let s = 0;
+            notes.forEach((f, nIdx) => {
+              const nt = lt - nIdx * 0.28;
+              if (nt > 0) {
+                const env = Math.exp(-nt * 3.8);
+                s += Math.sin(2 * Math.PI * f * nt + ch * 0.15) * env * 0.14;
+              }
+            });
+            data[i] = s;
+          }
+        }
+        const wavBlob = encodeWav16(buf);
+        const audFile = new File([wavBlob], 'sample-chime.wav', { type: 'audio/wav' });
+
+        // 3. テストデータ（CSVサンプル）
+        const csvContent = [
+          'id,module_name,category,pressure_psi,status',
+          '101,Image Boiler,image,85,active',
+          '102,Acoustic Turbine,audio,92,active',
+          '103,"Text & Data Press",text,78,ready'
+        ].join('\r\n');
+        const csvFile = new File([csvContent], 'sample-inventory.csv', { type: 'text/csv' });
+
+        // 4. テストMarkdown
+        const mdContent = `# Aether Forge Spec   \n\n\nこれは　テスト用の**Markdown**文書です。  \n\n- 完全ローカル変換\n- 外部送信なし\n\n> 真鍮と蒸気で稼働するブラウザ工房。`;
+        const mdFile = new File([mdContent], 'sample-note.md', { type: 'text/markdown' });
+
+        addFilesToQueue([imgFile, audFile, csvFile, mdFile]);
+        showToast('画像・音声・CSV・MDのテスト素材4件を投入しました', 'success');
+      }
+
+      /* ====================================================================
+         10. QUEUE MANAGEMENT & UI RENDERING
+         ==================================================================== */
+      function addFilesToQueue(fileList) {
+        const added = [];
+        for (const file of Array.from(fileList)) {
+          const cat = detectCategory(file);
+          if (cat === 'unknown') {
+            showToast(`非対応の形式です: ${file.name}`, 'error');
+            sfx.playError();
+            continue;
+          }
+          const item = {
+            id: uid(),
+            file,
+            name: file.name,
+            size: file.size,
+            category: cat,
+            ext: getExtension(file.name),
+            status: 'ready',
+            resultBlob: null,
+            resultName: '',
+            resultSize: 0,
+            resultUrl: null,
+            resultText: null,
+            previewThumb: cat === 'image' ? URL.createObjectURL(file) : null,
+            meta: '',
+            errorMsg: ''
+          };
+          state.files.push(item);
+          added.push(item);
+        }
+
+        if (added.length > 0) {
+          sfx.playClick(1.1);
+          // 最初の投入種別に合わせて炉タブを自動切替
+          switchFurnace(added[0].category, true);
+          renderQueue();
+          updateTelemetry();
+        }
+      }
+
+      function removeQueueItem(id) {
+        const idx = state.files.findIndex(f => f.id === id);
+        if (idx === -1) return;
+        const item = state.files[idx];
+        if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+        if (item.previewThumb) URL.revokeObjectURL(item.previewThumb);
+        state.files.splice(idx, 1);
+        sfx.playClick(0.8);
+        renderQueue();
+        updateTelemetry();
+      }
+
+      function clearQueue() {
+        state.files.forEach(item => {
+          if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+          if (item.previewThumb) URL.revokeObjectURL(item.previewThumb);
+        });
+        state.files = [];
+        sfx.playClick(0.75);
+        renderQueue();
+        updateTelemetry();
+        setGaugeProgress(0, 'STANDBY');
+        showToast('製造キューをクリアしました');
+      }
+
+      async function processSingleItem(item) {
+        item.status = 'processing';
+        item.errorMsg = '';
+        renderQueue();
+
+        try {
+          let res;
+          if (item.category === 'image') res = await convertImageItem(item);
+          else if (item.category === 'audio') res = await convertAudioItem(item);
+          else if (item.category === 'text') res = await convertTextItem(item);
+          else throw new Error('未対応カテゴリです');
+
+          if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+          item.resultBlob = res.blob;
+          item.resultName = res.name;
+          item.resultSize = res.blob.size;
+          item.resultUrl = URL.createObjectURL(res.blob);
+          item.resultText = res.text !== undefined ? res.text : null;
+          item.meta = res.meta || '';
+          item.status = 'done';
+        } catch (err) {
+          item.status = 'error';
+          item.errorMsg = err && err.message ? err.message : '変換中にエラーが発生しました';
+          sfx.playError();
+        }
+        renderQueue();
+        updateTelemetry();
+      }
+
+      async function processAllQueue() {
+        if (state.isProcessing || state.files.length === 0) return;
+        state.isProcessing = true;
+        document.body.classList.add('is-forging');
+        document.getElementById('convertAllBtn').disabled = true;
+        sfx.playSteam(0.5);
+        emitSteamPuffs(7);
+
+        const targets = state.queueFilter === 'all'
+          ? state.files
+          : state.files.filter(f => f.category === state.queueFilter);
+
+        let completed = 0;
+        let errors = 0;
+        setGaugeProgress(15, 'PRESSURIZING...');
+
+        for (const item of targets) {
+          setGaugeProgress(Math.round(15 + (completed / targets.length) * 80), `FORGING ${completed + 1}/${targets.length}`);
+          await processSingleItem(item);
+          if (item.status === 'error') errors++;
+          completed++;
+        }
+
+        state.isProcessing = false;
+        document.body.classList.remove('is-forging');
+        setGaugeProgress(100, errors > 0 ? 'DONE WITH ERR' : 'COMPLETE');
+        emitSteamPuffs(5);
+
+        if (errors === 0) {
+          sfx.playBell();
+          showToast(`${completed}件の変換が完了しました`, 'success');
+        } else {
+          showToast(`${completed}件処理（うち${errors}件エラー）`, 'error');
+        }
+
+        updateTelemetry();
+        setTimeout(() => {
+          if (!state.isProcessing) setGaugeProgress(0, 'READY');
+        }, 2500);
+      }
+
+      async function downloadAllAsZip() {
+        const doneItems = state.files.filter(f => f.status === 'done' && f.resultBlob);
+        if (doneItems.length === 0) {
+          showToast('ZIP化する変換済みファイルがありません', 'error');
+          return;
+        }
+        sfx.playSteam(0.35);
+        emitSteamPuffs(4);
+
+        // 同名ファイル衝突回避
+        const nameCount = {};
+        const entries = doneItems.map(item => {
+          let fname = item.resultName || item.name;
+          if (nameCount[fname]) {
+            nameCount[fname]++;
+            fname = `${getBaseName(fname)}_${nameCount[fname]}.${getExtension(fname)}`;
+          } else {
+            nameCount[fname] = 1;
+          }
+          return { name: fname, blob: item.resultBlob };
+        });
+
+        try {
+          let zipBlob;
+          if (typeof window.JSZip !== 'undefined') {
+            const zip = new window.JSZip();
+            entries.forEach(e => zip.file(e.name, e.blob));
+            zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+          } else {
+            // CDN未接続環境向けの完全ローカルフォールバックZIPエンジン
+            zipBlob = await buildStoreZip(entries);
+          }
+          const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+          triggerDownload(zipBlob, `aether-forge-${stamp}.zip`);
+          sfx.playBell();
+          showToast(`${entries.length}件をZIPアーカイブに梱包しました`, 'success');
+        } catch (err) {
+          sfx.playError();
+          showToast('ZIP生成に失敗しました: ' + err.message, 'error');
+        }
+      }
+
+      function setGaugeProgress(percent, statusLabel) {
+        const p = Math.max(0, Math.min(100, percent));
+        const arc = document.getElementById('gaugeArc');
+        const needle = document.getElementById('gaugeNeedle');
+        const bar = document.getElementById('globalProgressBar');
+        const txt = document.getElementById('boilerStatusText');
+
+        // 198 = full arc length, -115deg to +115deg
+        arc.style.strokeDashoffset = String(198 - (198 * p) / 100);
+        const deg = -115 + (230 * p) / 100;
+        needle.style.transform = `rotate(${deg}deg)`;
+        bar.style.width = `${p}%`;
+        if (statusLabel) txt.textContent = statusLabel;
+      }
+
+      function updateTelemetry() {
+        const total = state.files.length;
+        const forged = state.files.filter(f => f.status === 'done').length;
+        const imgCount = state.files.filter(f => f.category === 'image').length;
+        const audCount = state.files.filter(f => f.category === 'audio').length;
+        const txtCount = state.files.filter(f => f.category === 'text').length;
+
+        document.getElementById('statQueued').textContent = String(total).padStart(2, '0');
+        document.getElementById('statForged').textContent = String(forged).padStart(2, '0');
+        document.getElementById('countImage').textContent = imgCount;
+        document.getElementById('countAudio').textContent = audCount;
+        document.getElementById('countText').textContent = txtCount;
+
+        // 圧縮・変化率算出
+        const doneFiles = state.files.filter(f => f.status === 'done');
+        if (doneFiles.length > 0) {
+          const origSum = doneFiles.reduce((s, f) => s + f.size, 0);
+          const outSum = doneFiles.reduce((s, f) => s + f.resultSize, 0);
+          const ratio = origSum > 0 ? Math.round((outSum / origSum) * 100) : 100;
+          document.getElementById('statRatio').textContent = `${ratio}%`;
+        } else {
+          document.getElementById('statRatio').textContent = '-- %';
+        }
+
+        document.getElementById('convertAllBtn').disabled = total === 0 || state.isProcessing;
+        document.getElementById('downloadZipBtn').disabled = forged === 0 || state.isProcessing;
+        document.getElementById('clearQueueBtn').disabled = total === 0 || state.isProcessing;
+
+        const qLamp = document.getElementById('queueLamp');
+        qLamp.className = 'lamp ' + (state.isProcessing ? 'on' : (forged > 0 ? 'green' : (total > 0 ? 'on' : '')));
+
+        const summary = document.getElementById('queueSummaryText');
+        if (total === 0) {
+          summary.textContent = '投入待ち — ファイルをドロップするかテスト素材を読み込んでください';
+        } else {
+          summary.textContent = `全${total}件中 ${forged}件変換済み (IMG:${imgCount} / AUD:${audCount} / TXT:${txtCount})`;
+        }
+      }
+
+      function renderQueue() {
+        const list = document.getElementById('queueList');
+        const filtered = state.queueFilter === 'all'
+          ? state.files
+          : state.files.filter(f => f.category === state.queueFilter);
+
+        if (filtered.length === 0) {
+          list.innerHTML = `
+            <div class="iron-recess rounded-xl p-8 text-center flex flex-col items-center justify-center gap-3 min-h-[260px]">
+              <svg viewBox="0 0 80 80" class="w-14 h-14 text-[#6b4c1d]/70" fill="none" stroke="currentColor" stroke-width="1.6">
+                <circle cx="40" cy="40" r="26" stroke-dasharray="4 4"/>
+                <circle cx="40" cy="40" r="10"/>
+                <path d="M40 8v8M40 64v8M8 40h8M64 40h8"/>
+              </svg>
+              <div class="space-y-1">
+                <p class="font-display text-sm text-[#d4a853] tracking-widest">CONVEYOR IDLE</p>
+                <p class="text-xs text-[#9c8f7a] max-w-sm">
+                  ${state.files.length === 0
+                    ? '画像・音声・テキスト/データファイルをまとめて投入できます。左側の各炉で設定を選び、「IGNITE ALL」で一括変換を実行してください。'
+                    : '選択中のフィルタに該当するファイルがありません。ALLタブで確認してください。'}
+                </p>
+              </div>
+            </div>`;
+          return;
+        }
+
+        list.innerHTML = '';
+        filtered.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'iron-recess rounded-xl p-3 sm:p-3.5 border border-amber-800/35 hover:border-amber-600/50 transition-colors flex flex-col gap-2.5';
+
+          const badgeColors = {
+            image: 'bg-amber-900/50 text-amber-300 border-amber-600/50',
+            audio: 'bg-orange-950/60 text-orange-300 border-orange-600/50',
+            text: 'bg-stone-800 text-stone-200 border-stone-500/50'
+          };
+          const lampClass = item.status === 'done' ? 'green' : (item.status === 'error' ? 'red' : (item.status === 'processing' ? 'on' : ''));
+          const statusLabel = { ready: 'READY', processing: 'FORGING...', done: 'FORGED', error: 'ERROR' }[item.status];
+
+          // サイズ比較表示
+          let sizeHtml = `<span class="text-[#9c8f7a]">${formatBytes(item.size)}</span>`;
+          if (item.status === 'done') {
+            const diffPct = item.size > 0 ? Math.round(((item.resultSize - item.size) / item.size) * 100) : 0;
+            const diffColor = diffPct <= 0 ? 'text-emerald-400' : 'text-amber-300';
+            const sign = diffPct > 0 ? '+' : '';
+            sizeHtml += ` <span class="text-amber-600">&rarr;</span> <span class="text-[#f3d796] font-bold">${formatBytes(item.resultSize)}</span> <span class="${diffColor}">(${sign}${diffPct}%)</span>`;
+          }
+
+          // サムネイルまたは種別ミニアイコン
+          let thumbHtml = '';
+          if (item.category === 'image' && item.previewThumb) {
+            thumbHtml = `<img src="${item.status === 'done' && item.resultUrl ? item.resultUrl : item.previewThumb}" alt="" class="w-11 h-11 rounded-lg object-cover border border-amber-700/50 bg-[#0d0b09] shrink-0">`;
+          } else if (item.category === 'audio') {
+            thumbHtml = `<div class="w-11 h-11 rounded-lg border border-amber-700/40 bg-[#1a1410] flex items-center justify-center shrink-0 text-amber-400">
+              <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14v-4M8 17V7M12 20V4M16 16V8M20 13v-2" stroke-linecap="round"/></svg>
+            </div>`;
+          } else {
+            thumbHtml = `<div class="w-11 h-11 rounded-lg border border-amber-700/40 bg-[#1a1410] flex items-center justify-center shrink-0 text-[#d4a853]">
+              <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l5 5v13H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+            </div>`;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-start gap-3">
+              ${thumbHtml}
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="lamp ${lampClass}"></span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-mono-tech uppercase border ${badgeColors[item.category]}">${item.category}</span>
+                  <span class="font-mono-tech text-xs sm:text-sm font-bold text-[#f3d796] truncate max-w-[180px] sm:max-w-[280px]" title="${escapeHtml(item.status === 'done' ? item.resultName : item.name)}">
+                    ${escapeHtml(item.status === 'done' ? item.resultName : item.name)}
+                  </span>
+                </div>
+                <div class="font-mono-tech text-[11px] mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  ${sizeHtml}
+                  <span class="text-[10px] text-amber-400/90">[${statusLabel}]</span>
+                </div>
+                ${item.meta ? `<div class="font-mono-tech text-[10px] text-[#9c8f7a] mt-0.5">${escapeHtml(item.meta)}</div>` : ''}
+                ${item.errorMsg ? `<div class="text-[11px] text-red-400 mt-1">${escapeHtml(item.errorMsg)}</div>` : ''}
+              </div>
+              <button type="button" data-action="remove" data-id="${item.id}" class="btn-iron px-2 py-1 rounded text-[10px] font-mono-tech text-[#9c8f7a] hover:text-red-300 shrink-0" title="キューから削除">DEL</button>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-amber-900/35">
+              ${item.category === 'audio' && item.status === 'done' && item.resultUrl
+                ? `<audio controls src="${item.resultUrl}" class="h-7 w-full sm:w-56 opacity-90"></audio>`
+                : `<span class="font-mono-tech text-[10px] text-[#8a7d68] truncate max-w-[180px]">SRC: ${escapeHtml(item.name)}</span>`}
+              <div class="flex items-center gap-1.5 ml-auto">
+                <button type="button" data-action="convert" data-id="${item.id}" class="btn-iron px-2.5 py-1.5 rounded text-[11px] font-mono-tech text-amber-300" ${state.isProcessing ? 'disabled' : ''}>
+                  ${item.status === 'done' ? 'RE-FORGE' : 'FORGE'}
+                </button>
+                ${item.status === 'done' ? `
+                  <button type="button" data-action="preview" data-id="${item.id}" class="btn-iron px-2.5 py-1.5 rounded text-[11px] font-mono-tech">PREVIEW</button>
+                  <button type="button" data-action="download" data-id="${item.id}" class="btn-brass px-3 py-1.5 rounded text-[11px] font-mono-tech">DL</button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+          list.appendChild(card);
+        });
+      }
+
+      /* ====================================================================
+         11. PREVIEW MODAL & CLIPBOARD (document.execCommand互換)
+         ==================================================================== */
+      function openPreviewModal(item) {
+        state.previewItemId = item.id;
+        const modal = document.getElementById('previewModal');
+        const title = document.getElementById('previewTitle');
+        const meta = document.getElementById('previewMeta');
+        const body = document.getElementById('previewBody');
+        const copyBtn = document.getElementById('previewCopyBtn');
+
+        title.textContent = item.resultName || item.name;
+        meta.textContent = `${formatBytes(item.size)} -> ${formatBytes(item.resultSize)}  |  ${item.meta}`;
+        copyBtn.classList.add('hidden');
+        body.innerHTML = '';
+
+        if (item.category === 'image' && item.resultUrl) {
+          body.innerHTML = `
+            <div class="flex items-center justify-center min-h-[240px] rounded bg-[repeating-conic-gradient(#26211c_0%_25%,#1a1612_0%_50%)] bg-[length:20px_20px] p-3">
+              <img src="${item.resultUrl}" alt="" class="max-w-full max-h-[58vh] object-contain rounded shadow-lg">
+            </div>`;
+        } else if (item.category === 'audio' && item.resultUrl) {
+          body.innerHTML = `
+            <div class="flex flex-col items-center justify-center gap-4 py-10">
+              <p class="font-display text-sm text-[#e0b45c] tracking-widest">ACOUSTIC OUTPUT MONITOR</p>
+              <audio controls src="${item.resultUrl}" class="w-full max-w-md"></audio>
+              <p class="font-mono-tech text-xs text-[#9c8f7a]">${escapeHtml(item.meta)}</p>
+            </div>`;
+        } else if (item.category === 'text') {
+          copyBtn.classList.remove('hidden');
+          const pre = document.createElement('pre');
+          pre.className = 'font-mono-tech text-xs text-[#e5d8bf] whitespace-pre-wrap break-all leading-relaxed';
+          pre.textContent = item.resultText || '';
+          body.appendChild(pre);
+        }
+
+        modal.classList.remove('hidden');
+        sfx.playClick(1.05);
+      }
+
+      function copyTextSafely(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('クリップボードへコピーしました', 'success');
+          sfx.playClick(1.25);
+        } catch (e) {
+          showToast('コピーに失敗しました', 'error');
+        }
+        ta.remove();
+      }
+
+      /* ====================================================================
+         12. UI SWITCHES & EVENT BINDINGS
+         ==================================================================== */
+      function syncComfortSwitches() {
+        sfx.enabled = state.sfxEnabled;
+        document.getElementById('sfxStateLabel').textContent = state.sfxEnabled ? 'ON' : 'OFF';
+        document.getElementById('sfxLamp').className = 'lamp ' + (state.sfxEnabled ? 'on' : '');
+        localStorage.setItem('aether_sfx', state.sfxEnabled ? 'on' : 'off');
+
+        document.body.classList.toggle('anim-off', !state.animEnabled);
+        document.getElementById('animStateLabel').textContent = state.animEnabled ? 'ON' : 'OFF';
+        document.getElementById('animLamp').className = 'lamp ' + (state.animEnabled ? 'on' : '');
+        localStorage.setItem('aether_anim', state.animEnabled ? 'on' : 'off');
+      }
+
+      function switchMainView(view) {
+        state.activeView = view;
+        const factoryEl = document.getElementById('factoryView');
+        const bpEl = document.getElementById('blueprintView');
+        const fBtn = document.getElementById('navFactoryBtn');
+        const bBtn = document.getElementById('navBlueprintBtn');
+
+        if (view === 'factory') {
+          factoryEl.classList.remove('hidden');
+          bpEl.classList.add('hidden');
+          fBtn.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono-tech text-xs font-bold tracking-wider transition-all bg-amber-600/25 text-[#f3d796] border border-amber-500/60';
+          bBtn.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono-tech text-xs font-bold tracking-wider transition-all text-[#9c8f7a] hover:text-[#e5d8bf] border border-transparent';
+        } else {
+          factoryEl.classList.add('hidden');
+          bpEl.classList.remove('hidden');
+          bBtn.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono-tech text-xs font-bold tracking-wider transition-all bg-sky-500/25 text-sky-200 border border-sky-400/60';
+          fBtn.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono-tech text-xs font-bold tracking-wider transition-all text-[#9c8f7a] hover:text-[#e5d8bf] border border-transparent';
+        }
+        sfx.playClick(1.0);
+      }
+
+      function switchFurnace(furnace, silent = false) {
+        state.activeFurnace = furnace;
+        document.querySelectorAll('.furnace-tab').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.furnace === furnace);
+        });
+        document.getElementById('panelImage').classList.toggle('hidden', furnace !== 'image');
+        document.getElementById('panelAudio').classList.toggle('hidden', furnace !== 'audio');
+        document.getElementById('panelText').classList.toggle('hidden', furnace !== 'text');
+        if (!silent) sfx.playClick(0.95);
+      }
+
+      function setImgBgMode(mode) {
+        state.imgBgMode = mode;
+        document.querySelectorAll('.img-bg-btn').forEach(btn => {
+          const active = btn.dataset.bgmode === mode;
+          btn.classList.toggle('border-amber-400', active);
+          btn.classList.toggle('text-amber-200', active);
+        });
+        document.getElementById('imgCustomBgWrap').classList.toggle('hidden', mode !== 'custom');
+      }
+
+      function syncSliderReadouts() {
+        document.getElementById('imgQualityVal').textContent = document.getElementById('imgQuality').value + '%';
+        document.getElementById('imgBrightVal').textContent = document.getElementById('imgBrightness').value + '%';
+        document.getElementById('imgContrastVal').textContent = document.getElementById('imgContrast').value + '%';
+        document.getElementById('audTrimDbVal').textContent = document.getElementById('audTrimDb').value + ' dB';
+        document.getElementById('audFadeInVal').textContent = Number(document.getElementById('audFadeIn').value).toFixed(1) + ' s';
+        document.getElementById('audFadeOutVal').textContent = Number(document.getElementById('audFadeOut').value).toFixed(1) + ' s';
+        document.getElementById('audNormDbVal').textContent = Number(document.getElementById('audNormDb').value).toFixed(1) + ' dB';
+      }
+
+      function initEvents() {
+        // Comfort switches
+        document.getElementById('toggleSfxBtn').addEventListener('click', () => {
+          state.sfxEnabled = !state.sfxEnabled;
+          syncComfortSwitches();
+          if (state.sfxEnabled) sfx.playClick(1.15);
+        });
+        document.getElementById('toggleAnimBtn').addEventListener('click', () => {
+          state.animEnabled = !state.animEnabled;
+          syncComfortSwitches();
+          sfx.playClick(0.9);
+        });
+
+        // Navigation
+        document.getElementById('navFactoryBtn').addEventListener('click', () => switchMainView('factory'));
+        document.getElementById('navBlueprintBtn').addEventListener('click', () => switchMainView('blueprint'));
+        document.getElementById('backToWorkshopBtn').addEventListener('click', () => switchMainView('factory'));
+
+        // Furnace tabs
+        document.querySelectorAll('.furnace-tab').forEach(btn => {
+          btn.addEventListener('click', () => switchFurnace(btn.dataset.furnace));
+        });
+
+        // Presets
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+          btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+        });
+
+        // Image bg mode
+        document.querySelectorAll('.img-bg-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            setImgBgMode(btn.dataset.bgmode);
+            sfx.playClick(1.0);
+          });
+        });
+        const colorPicker = document.getElementById('imgCustomColor');
+        const colorHex = document.getElementById('imgCustomHex');
+        colorPicker.addEventListener('input', () => { colorHex.value = colorPicker.value; });
+        colorHex.addEventListener('change', () => {
+          if (/^#[0-9a-fA-F]{6}$/.test(colorHex.value.trim())) {
+            colorPicker.value = colorHex.value.trim();
+          }
+        });
+
+        // Sliders
+        ['imgQuality', 'imgBrightness', 'imgContrast', 'audTrimDb', 'audFadeIn', 'audFadeOut', 'audNormDb'].forEach(id => {
+          document.getElementById(id).addEventListener('input', syncSliderReadouts);
+        });
+
+        // File Input & Drag-Drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        document.getElementById('selectFilesBtn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          fileInput.click();
+        });
+        dropZone.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          fileInput.click();
+        });
+        fileInput.addEventListener('change', () => {
+          if (fileInput.files && fileInput.files.length > 0) {
+            addFilesToQueue(fileInput.files);
+            fileInput.value = '';
+          }
+        });
+        ['dragenter', 'dragover'].forEach(evt => {
+          dropZone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+          dropZone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+          });
+        });
+        dropZone.addEventListener('drop', (e) => {
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            addFilesToQueue(e.dataTransfer.files);
+          }
+        });
+
+        // Test Samples
+        document.getElementById('injectSampleBtn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          injectTestSamples();
+        });
+
+        // Direct Text Modal
+        const dtModal = document.getElementById('directTextModal');
+        const closeDt = () => dtModal.classList.add('hidden');
+        document.getElementById('openDirectTextBtn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          dtModal.classList.remove('hidden');
+          sfx.playClick(1.0);
+        });
+        document.getElementById('closeDirectTextBtn').addEventListener('click', closeDt);
+        document.getElementById('cancelDirectTextBtn').addEventListener('click', closeDt);
+        document.getElementById('submitDirectTextBtn').addEventListener('click', () => {
+          const content = document.getElementById('directTextArea').value;
+          if (!content.trim()) {
+            showToast('テキストを入力してください', 'error');
+            return;
+          }
+          const rawName = (document.getElementById('directTextName').value || 'direct-note').trim().replace(/[\\/:*?"<>|]/g, '_');
+          const ext = document.getElementById('directTextExt').value;
+          const file = new File([content], `${rawName}.${ext}`, { type: 'text/plain;charset=utf-8' });
+          addFilesToQueue([file]);
+          document.getElementById('directTextArea').value = '';
+          closeDt();
+          showToast(`${rawName}.${ext} をキューへ投入しました`, 'success');
+        });
+
+        // Batch actions
+        document.getElementById('convertAllBtn').addEventListener('click', processAllQueue);
+        document.getElementById('downloadZipBtn').addEventListener('click', downloadAllAsZip);
+        document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
+
+        // Queue Filter
+        document.querySelectorAll('.queue-filter-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.queueFilter = btn.dataset.filter;
+            document.querySelectorAll('.queue-filter-btn').forEach(b => {
+              const active = b.dataset.filter === state.queueFilter;
+              b.className = active
+                ? 'queue-filter-btn px-2.5 py-1 rounded bg-amber-600/30 text-[#f3d796] border border-amber-500/60'
+                : 'queue-filter-btn px-2.5 py-1 rounded bg-transparent text-[#9c8f7a] border border-amber-800/40 hover:text-[#e5d8bf]';
+            });
+            sfx.playClick(1.0);
+            renderQueue();
+          });
+        });
+
+        // Queue item delegated events
+        document.getElementById('queueList').addEventListener('click', async (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const item = state.files.find(f => f.id === btn.dataset.id);
+          if (!item) return;
+
+          if (action === 'remove') {
+            removeQueueItem(item.id);
+          } else if (action === 'convert') {
+            if (state.isProcessing) return;
+            state.isProcessing = true;
+            document.body.classList.add('is-forging');
+            sfx.playSteam(0.32);
+            emitSteamPuffs(4);
+            setGaugeProgress(45, 'FORGING...');
+            await processSingleItem(item);
+            state.isProcessing = false;
+            document.body.classList.remove('is-forging');
+            setGaugeProgress(item.status === 'done' ? 100 : 0, item.status === 'done' ? 'COMPLETE' : 'ERROR');
+            if (item.status === 'done') {
+              sfx.playBell();
+              showToast(`${item.resultName} を変換しました`, 'success');
+            }
+            setTimeout(() => { if (!state.isProcessing) setGaugeProgress(0, 'READY'); }, 1800);
+          } else if (action === 'download' && item.resultBlob) {
+            sfx.playClick(1.2);
+            triggerDownload(item.resultBlob, item.resultName || item.name);
+          } else if (action === 'preview' && item.status === 'done') {
+            openPreviewModal(item);
+          }
+        });
+
+        // Preview Modal Actions
+        const pModal = document.getElementById('previewModal');
+        document.getElementById('closePreviewBtn').addEventListener('click', () => {
+          pModal.classList.add('hidden');
+          document.getElementById('previewBody').innerHTML = '';
+        });
+        document.getElementById('previewCopyBtn').addEventListener('click', () => {
+          const item = state.files.find(f => f.id === state.previewItemId);
+          if (item && item.resultText !== null) copyTextSafely(item.resultText);
+        });
+        document.getElementById('previewDownloadBtn').addEventListener('click', () => {
+          const item = state.files.find(f => f.id === state.previewItemId);
+          if (item && item.resultBlob) {
+            sfx.playClick(1.2);
+            triggerDownload(item.resultBlob, item.resultName || item.name);
+          }
+        });
+
+        // Codec support readout
+        const codec = getSupportedCompressedAudioMime();
+        document.getElementById('audCodecInfo').textContent = codec
+          ? `検出された軽量圧縮コーデック: ${codec.label} (.${codec.ext})`
+          : '※このブラウザは軽量圧縮書き出し非対応のためWAV出力となります';
+      }
+
+      // 起動初期化
+      window.addEventListener('DOMContentLoaded', () => {
+        syncComfortSwitches();
+        syncSliderReadouts();
+        initEvents();
+        updateTelemetry();
+      });
+    })();
+  </script>
+</body>
+</html>

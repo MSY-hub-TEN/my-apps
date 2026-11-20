@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PIXEL SPRITE FACTORY // ASSET STUDIO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            chassis: {
+              950: '#09090b',
+              900: '#121215',
+              850: '#18181c',
+              800: '#202026',
+              700: '#2e2e36',
+              600: '#3f3f4a',
+            },
+            accent: {
+              cyan: '#06b6d4',
+              amber: '#f59e0b',
+              emerald: '#10b981',
+              rose: '#f43f5e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* カスタムスクロールバー＆スタジオ機材風スライダー */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #121215;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2e2e36;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f4a;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      background: #2e2e36;
+      border-radius: 2px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      background: #06b6d4;
+      border: 1px solid #cffafe;
+      margin-top: -5px;
+      transition: transform 0.1s ease, background-color 0.1s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      background: #22d3ee;
+    }
+
+    /* 透過チェッカーボード背景 */
+    .checkerboard {
+      background-color: #18181c;
+      background-image: 
+        linear-gradient(45deg, #222228 25%, transparent 25%), 
+        linear-gradient(-45deg, #222228 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #222228 75%), 
+        linear-gradient(-45deg, transparent 75%, #222228 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+
+    /* ピクセルアート鮮明描画 */
+    .pixelated {
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+  </style>
+</head>
+<body class="bg-chassis-950 text-zinc-200 font-sans antialiased min-h-screen flex flex-col selection:bg-accent-cyan/30 selection:text-cyan-200">
+
+  <!-- トップヘッダー（スタジオラック風） -->
+  <header class="bg-chassis-900 border-b border-chassis-700 sticky top-0 z-30">
+    <div class="max-w-[1600px] mx-auto px-3 sm:px-5 h-14 flex items-center justify-between gap-2">
+      <!-- ブランドロゴ＆ステータス -->
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-2.5 h-2.5 rounded-full bg-accent-cyan shadow-[0_0_8px_#06b6d4] shrink-0"></div>
+        <div class="truncate">
+          <h1 class="font-mono text-sm sm:text-base font-bold tracking-wider text-zinc-100 truncate">
+            PIXEL SPRITE FACTORY
+          </h1>
+          <p class="font-mono text-[10px] text-zinc-400 tracking-widest hidden sm:block">
+            LOCAL PIXELIZATION & MOTION DIFF SYNTHESIZER // V1.0
+          </p>
+        </div>
+      </div>
+
+      <!-- メインモード切替タブ（スタジオ vs 解説ガイド） -->
+      <nav class="flex items-center bg-chassis-950 p-1 rounded-lg border border-chassis-700 shrink-0" role="tablist">
+        <button id="tab-studio" onclick="switchMainTab('studio')" class="px-3 sm:px-4 py-1.5 rounded-md font-mono text-xs font-semibold transition-all bg-chassis-800 text-accent-cyan border border-chassis-600 shadow-sm">
+          WORKSTATION
+        </button>
+        <button id="tab-guide" onclick="switchMainTab('guide')" class="px-3 sm:px-4 py-1.5 rounded-md font-mono text-xs font-semibold transition-all text-zinc-400 hover:text-zinc-200">
+          REFERENCE / GUIDE
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ステータス通知トースト（alert代替） -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ===================================================================== -->
+  <!-- VIEW 1: WORKSTATION (メイン作業スタジオ画面)                          -->
+  <!-- ===================================================================== -->
+  <main id="view-studio" class="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+    <!-- 左カラム：入力・前処理・ドット絵変換モジュール (4カラム分) -->
+    <section class="lg:col-span-4 flex flex-col gap-4">
+
+      <!-- MODULE 01: SOURCE INPUT & PRE-PROCESS -->
+      <div class="bg-chassis-900 border border-chassis-700 rounded-xl overflow-hidden shadow-lg">
+        <div class="bg-chassis-850 px-4 py-2.5 border-b border-chassis-700 flex items-center justify-between">
+          <span class="font-mono text-xs font-bold tracking-wider text-zinc-300">01 // SOURCE & PRE-PROCESS</span>
+          <span id="source-dim-badge" class="font-mono text-[11px] px-2 py-0.5 rounded bg-chassis-950 text-zinc-400 border border-chassis-700">NO SIGNAL</span>
+        </div>
+
+        <div class="p-4 flex flex-col gap-4">
+          <!-- ファイルドロップ＆サンプル生成 -->
+          <div id="drop-zone" class="border-2 border-dashed border-chassis-600 hover:border-accent-cyan rounded-lg p-4 text-center transition-colors cursor-pointer bg-chassis-950/50">
+            <input type="file" id="file-input" accept="image/*" class="hidden">
+            <p class="font-mono text-xs text-zinc-300 font-medium">DROP IMAGE OR TAP TO LOAD</p>
+            <p class="text-[11px] text-zinc-500 mt-1">PNG / JPG / WEBP (LOCAL PROCESSING ONLY)</p>
+            <div class="mt-3 flex flex-wrap justify-center gap-2">
+              <button type="button" onclick="event.stopPropagation(); loadDemoCharacter('idol')" class="px-2.5 py-1 rounded bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 font-mono text-[11px] text-zinc-300 transition">
+                LOAD DEMO: Y2K IDOL
+              </button>
+              <button type="button" onclick="event.stopPropagation(); loadDemoCharacter('bot')" class="px-2.5 py-1 rounded bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 font-mono text-[11px] text-zinc-300 transition">
+                LOAD DEMO: STUDIO BOT
+              </button>
+            </div>
+          </div>
+
+          <!-- 背景透過（クロマキー）＆トリミング -->
+          <div class="bg-chassis-850/70 p-3 rounded-lg border border-chassis-700/80 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-[11px] font-semibold text-zinc-300">CHROMA KEY & TRIM</span>
+              <div class="flex items-center gap-1.5">
+                <button id="btn-eyedropper" onclick="toggleEyedropper()" class="px-2.5 py-1 rounded font-mono text-[11px] font-medium bg-chassis-800 hover:bg-chassis-700 text-zinc-300 border border-chassis-600 transition">
+                  PICK BG COLOR
+                </button>
+                <button onclick="autoPickCornerColor()" class="px-2 py-1 rounded font-mono text-[11px] bg-chassis-800 hover:bg-chassis-700 text-zinc-300 border border-chassis-600 transition" title="左上角の色を自動透過">
+                  AUTO CORNER
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-1.5 text-xs text-zinc-300 cursor-pointer">
+                <input type="checkbox" id="chk-chroma" onchange="schedulePipeline()" class="rounded bg-chassis-950 border-chassis-600 text-accent-cyan focus:ring-0">
+                <span class="font-mono text-[11px]">ENABLE KEY</span>
+              </label>
+              <div class="flex items-center gap-1.5 ml-auto">
+                <span class="font-mono text-[10px] text-zinc-400">KEY:</span>
+                <span id="chroma-swatch" class="w-5 h-5 rounded border border-chassis-500 inline-block checkerboard" style="background-color: #ffffff;"></span>
+                <span id="chroma-hex" class="font-mono text-[11px] text-zinc-400">#FFFFFF</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between font-mono text-[11px] text-zinc-400 mb-1">
+                <span>TOLERANCE</span>
+                <span id="val-tolerance" class="text-zinc-200">25</span>
+              </div>
+              <input type="range" id="rng-tolerance" min="0" max="150" value="25" oninput="updateParamLabel('tolerance', this.value); schedulePipeline()" class="w-full">
+            </div>
+
+            <div class="pt-1 border-t border-chassis-700/60 flex items-center justify-between">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="chk-trim" onchange="schedulePipeline()" class="rounded bg-chassis-950 border-chassis-600 text-accent-cyan focus:ring-0">
+                <span class="font-mono text-[11px] text-zinc-300">AUTO TRIM MARGINS</span>
+              </label>
+              <span class="font-mono text-[10px] text-zinc-500">FIT BOUNDS</span>
+            </div>
+          </div>
+
+          <!-- 色調補正（明度/コントラスト/彩度/色相） -->
+          <div class="bg-chassis-850/70 p-3 rounded-lg border border-chassis-700/80 flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-[11px] font-semibold text-zinc-300">TONE & COLOR ADJUST</span>
+              <button onclick="resetToneParams()" class="font-mono text-[10px] text-zinc-400 hover:text-accent-cyan transition">RESET</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div>
+                <div class="flex justify-between font-mono text-[10px] text-zinc-400">
+                  <span>BRIGHTNESS</span><span id="val-brightness" class="text-zinc-200">0</span>
+                </div>
+                <input type="range" id="rng-brightness" min="-100" max="100" value="0" oninput="updateParamLabel('brightness', this.value); schedulePipeline()" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between font-mono text-[10px] text-zinc-400">
+                  <span>CONTRAST</span><span id="val-contrast" class="text-zinc-200">0</span>
+                </div>
+                <input type="range" id="rng-contrast" min="-100" max="100" value="0" oninput="updateParamLabel('contrast', this.value); schedulePipeline()" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between font-mono text-[10px] text-zinc-400">
+                  <span>SATURATION</span><span id="val-saturation" class="text-zinc-200">0</span>
+                </div>
+                <input type="range" id="rng-saturation" min="-100" max="100" value="0" oninput="updateParamLabel('saturation', this.value); schedulePipeline()" class="w-full">
+              </div>
+              <div>
+                <div class="flex justify-between font-mono text-[10px] text-zinc-400">
+                  <span>HUE SHIFT</span><span id="val-hue" class="text-zinc-200">0°</span>
+                </div>
+                <input type="range" id="rng-hue" min="-180" max="180" value="0" oninput="updateParamLabel('hue', this.value + '°'); schedulePipeline()" class="w-full">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 02: PIXELIZATION & QUANTIZATION -->
+      <div class="bg-chassis-900 border border-chassis-700 rounded-xl overflow-hidden shadow-lg">
+        <div class="bg-chassis-850 px-4 py-2.5 border-b border-chassis-700 flex items-center justify-between">
+          <span class="font-mono text-xs font-bold tracking-wider text-zinc-300">02 // PIXEL & PALETTE ENGINE</span>
+          <span id="auto-scale-badge" class="font-mono text-[10px] px-2 py-0.5 rounded bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/30">SCALE: 1.0x</span>
+        </div>
+
+        <div class="p-4 flex flex-col gap-4">
+          <!-- 解像度プリセット＆カスタム数値 -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-mono text-[11px] font-semibold text-zinc-300">TARGET RESOLUTION (PX)</span>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="chk-aspect" checked onchange="handleAspectChange()" class="rounded bg-chassis-950 border-chassis-600 text-accent-cyan focus:ring-0">
+                <span class="font-mono text-[10px] text-zinc-400">KEEP ASPECT</span>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-5 gap-1.5 mb-2">
+              <button type="button" onclick="setResolutionPreset(16)" class="res-preset-btn py-1.5 rounded font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-300 transition">16</button>
+              <button type="button" onclick="setResolutionPreset(32)" class="res-preset-btn py-1.5 rounded font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-300 transition">32</button>
+              <button type="button" onclick="setResolutionPreset(64)" class="res-preset-btn py-1.5 rounded font-mono text-xs bg-chassis-800 border-accent-cyan text-accent-cyan border transition">64</button>
+              <button type="button" onclick="setResolutionPreset(128)" class="res-preset-btn py-1.5 rounded font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-300 transition">128</button>
+              <button type="button" onclick="setResolutionPreset(256)" class="res-preset-btn py-1.5 rounded font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-300 transition">256</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex items-center bg-chassis-950 border border-chassis-700 rounded px-2.5 py-1.5">
+                <span class="font-mono text-[11px] text-zinc-500 mr-2">W</span>
+                <input type="number" id="num-width" min="8" max="512" value="64" onchange="handleCustomDimInput('w')" class="w-full bg-transparent font-mono text-xs text-zinc-100 focus:outline-none">
+              </div>
+              <div class="flex items-center bg-chassis-950 border border-chassis-700 rounded px-2.5 py-1.5">
+                <span class="font-mono text-[11px] text-zinc-500 mr-2">H</span>
+                <input type="number" id="num-height" min="8" max="512" value="64" onchange="handleCustomDimInput('h')" class="w-full bg-transparent font-mono text-xs text-zinc-100 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <!-- カラーパレット＆減色 -->
+          <div>
+            <label class="block font-mono text-[11px] font-semibold text-zinc-300 mb-1.5">COLOR PALETTE / QUANTIZATION</label>
+            <select id="sel-palette" onchange="schedulePipeline()" class="w-full bg-chassis-950 border border-chassis-700 rounded-lg px-3 py-2 font-mono text-xs text-zinc-200 focus:outline-none focus:border-accent-cyan">
+              <option value="full">FULL COLOR (NO QUANTIZATION)</option>
+              <option value="32">ADAPTIVE 32 COLORS</option>
+              <option value="16" selected>ADAPTIVE 16 COLORS</option>
+              <option value="8">ADAPTIVE 8 COLORS</option>
+              <option value="y2k">PASTEL Y2K / DREAMY (12 COLORS)</option>
+              <option value="gb">GAMEBOY CLASSIC GREEN (4 SHADES)</option>
+              <option value="cyber">CYBER CYAN / MAGENTA (6 COLORS)</option>
+              <option value="mono">1-BIT MONOCHROME (2 COLORS)</option>
+            </select>
+          </div>
+
+          <!-- ディザリング＆アウトライン強調 -->
+          <div class="bg-chassis-850/70 p-3 rounded-lg border border-chassis-700/80 flex flex-col gap-3">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" id="chk-dither" onchange="schedulePipeline()" class="rounded bg-chassis-950 border-chassis-600 text-accent-cyan focus:ring-0">
+                  <span class="font-mono text-[11px] text-zinc-300">ORDERED DITHERING</span>
+                </label>
+                <span id="val-dither" class="font-mono text-[11px] text-zinc-200">50%</span>
+              </div>
+              <input type="range" id="rng-dither" min="0" max="100" value="50" oninput="updateParamLabel('dither', this.value + '%'); schedulePipeline()" class="w-full">
+            </div>
+
+            <div class="pt-2 border-t border-chassis-700/60">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-mono text-[11px] text-zinc-300">PIXEL OUTLINE</span>
+                <div class="flex items-center gap-1.5">
+                  <input type="color" id="col-outline" value="#121218" onchange="schedulePipeline()" class="w-5 h-5 rounded bg-transparent border-0 cursor-pointer">
+                  <select id="sel-outline" onchange="schedulePipeline()" class="bg-chassis-950 border border-chassis-700 rounded px-2 py-1 font-mono text-[11px] text-zinc-200">
+                    <option value="none">OFF</option>
+                    <option value="outer">OUTER STROKE (1PX)</option>
+                    <option value="edge">EDGE ENHANCE</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 中央カラム：プレビューモニター＆タイムライン編集 (5カラム分) -->
+    <section class="lg:col-span-5 flex flex-col gap-4">
+
+      <!-- MONITOR: DUAL / ANIMATION PREVIEW -->
+      <div class="bg-chassis-900 border border-chassis-700 rounded-xl overflow-hidden shadow-lg flex flex-col">
+        <div class="bg-chassis-850 px-4 py-2.5 border-b border-chassis-700 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-xs font-bold tracking-wider text-zinc-300">03 // VIEWPORT MONITOR</span>
+            <span id="eyedropper-indicator" class="hidden font-mono text-[10px] px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber border border-accent-amber/40 animate-pulse">
+              CLICK CANVAS TO PICK COLOR
+            </span>
+          </div>
+
+          <div class="flex items-center bg-chassis-950 p-0.5 rounded border border-chassis-700">
+            <button id="btn-view-anim" onclick="setMonitorMode('anim')" class="px-2.5 py-1 rounded font-mono text-[11px] bg-chassis-800 text-accent-cyan">
+              ANIMATION
+            </button>
+            <button id="btn-view-base" onclick="setMonitorMode('base')" class="px-2.5 py-1 rounded font-mono text-[11px] text-zinc-400 hover:text-zinc-200">
+              BASE PIXEL
+            </button>
+            <button id="btn-view-orig" onclick="setMonitorMode('orig')" class="px-2.5 py-1 rounded font-mono text-[11px] text-zinc-400 hover:text-zinc-200">
+              ORIGINAL
+            </button>
+          </div>
+        </div>
+
+        <!-- メインキャンバス領域 -->
+        <div class="relative w-full aspect-square max-h-[440px] checkerboard flex items-center justify-center overflow-hidden p-4 select-none">
+          <canvas id="main-preview-canvas" class="pixelated max-w-full max-h-full shadow-2xl transition-transform duration-75 cursor-crosshair"></canvas>
+
+          <!-- オーバーレイ情報（左下・右下） -->
+          <div class="absolute bottom-3 left-3 bg-chassis-950/85 backdrop-blur-sm border border-chassis-700 px-2.5 py-1 rounded font-mono text-[11px] text-zinc-300">
+            <span id="hud-res">64 x 64 PX</span>
+          </div>
+          <div class="absolute bottom-3 right-3 bg-chassis-950/85 backdrop-blur-sm border border-chassis-700 px-2.5 py-1 rounded font-mono text-[11px] text-accent-cyan">
+            <span id="hud-frame">FRAME 1 / 4</span>
+          </div>
+        </div>
+
+        <!-- トランスポート＆FPSコントロールバー -->
+        <div class="bg-chassis-850 px-4 py-3 border-t border-chassis-700 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-1.5">
+            <button id="btn-play-toggle" onclick="togglePlay()" class="px-3.5 py-1.5 rounded-md font-mono text-xs font-bold bg-accent-cyan text-chassis-950 hover:bg-cyan-400 transition shadow">
+              PAUSE
+            </button>
+            <button onclick="stepFrame(-1)" class="px-2.5 py-1.5 rounded-md font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-200">
+              PREV
+            </button>
+            <button onclick="stepFrame(1)" class="px-2.5 py-1.5 rounded-md font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-200">
+              NEXT
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3 flex-1 min-w-[160px] max-w-[240px]">
+            <span class="font-mono text-[11px] text-zinc-400 shrink-0">FPS: <strong id="val-fps" class="text-zinc-100">8</strong></span>
+            <input type="range" id="rng-fps" min="1" max="30" value="8" oninput="updateFPS(this.value)" class="w-full">
+          </div>
+
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="chk-grid-overlay" onchange="renderMainPreview()" class="rounded bg-chassis-950 border-chassis-600 text-accent-cyan focus:ring-0">
+            <span class="font-mono text-[11px] text-zinc-400">PIXEL GRID</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- TIMELINE & FRAME INSPECTOR (コマ一覧＆個別微調整) -->
+      <div class="bg-chassis-900 border border-chassis-700 rounded-xl overflow-hidden shadow-lg flex-1 flex flex-col">
+        <div class="bg-chassis-850 px-4 py-2.5 border-b border-chassis-700 flex items-center justify-between">
+          <span class="font-mono text-xs font-bold tracking-wider text-zinc-300">04 // FRAME TIMELINE & FINE TUNE</span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="addBlankFrame()" class="px-2 py-1 rounded font-mono text-[11px] bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-200 transition">
+              + ADD
+            </button>
+            <button onclick="duplicateCurrentFrame()" class="px-2 py-1 rounded font-mono text-[11px] bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-200 transition">
+              DUPLICATE
+            </button>
+            <button onclick="deleteCurrentFrame()" class="px-2 py-1 rounded font-mono text-[11px] bg-chassis-800 hover:bg-rose-950 border border-chassis-600 hover:border-rose-700 text-rose-400 transition">
+              DELETE
+            </button>
+          </div>
+        </div>
+
+        <!-- 横スクロールコマストリップ -->
+        <div id="timeline-strip" class="p-3 bg-chassis-950/60 border-b border-chassis-800 flex items-center gap-2.5 overflow-x-auto min-h-[104px]">
+          <!-- JSでサムネイルカードを動的生成 -->
+        </div>
+
+        <!-- 選択中コマの個別オフセット・パーティクル微調整 -->
+        <div class="p-3.5 bg-chassis-900 grid grid-cols-2 sm:grid-cols-4 gap-3 items-center">
+          <div>
+            <div class="flex justify-between font-mono text-[10px] text-zinc-400">
+              <span>OFFSET X (PX)</span><span id="val-frame-dx" class="text-zinc-200">0</span>
+            </div>
+            <input type="range" id="rng-frame-dx" min="-32" max="32" value="0" oninput="updateCurrentFrameParam('dx', parseInt(this.value))" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between font-mono text-[10px] text-zinc-400">
+              <span>OFFSET Y (PX)</span><span id="val-frame-dy" class="text-zinc-200">0</span>
+            </div>
+            <input type="range" id="rng-frame-dy" min="-32" max="32" value="0" oninput="updateCurrentFrameParam('dy', parseInt(this.value))" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between font-mono text-[10px] text-zinc-400">
+              <span>SQUASH / SCALE</span><span id="val-frame-sy" class="text-zinc-200">1.00</span>
+            </div>
+            <input type="range" id="rng-frame-sy" min="70" max="130" value="100" oninput="updateCurrentFrameParam('sy', parseInt(this.value)/100)" class="w-full">
+          </div>
+          <div>
+            <label class="block font-mono text-[10px] text-zinc-400 mb-1">PARTICLE OVERLAY</label>
+            <select id="sel-frame-particle" onchange="updateCurrentFrameParam('particle', this.value)" class="w-full bg-chassis-950 border border-chassis-700 rounded px-2 py-1 font-mono text-[11px] text-zinc-200">
+              <option value="none">NONE</option>
+              <option value="sparkle">SPARKLE (KIRA)</option>
+              <option value="heart">HEART</option>
+              <option value="star">STAR</option>
+              <option value="note">MUSIC NOTE</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右カラム：モーション自動生成＆書き出しモジュール (3カラム分) -->
+    <section class="lg:col-span-3 flex flex-col gap-4">
+
+      <!-- MODULE 05: MOTION DIFF GENERATOR -->
+      <div class="bg-chassis-900 border border-chassis-700 rounded-xl overflow-hidden shadow-lg">
+        <div class="bg-chassis-850 px-4 py-2.5 border-b border-chassis-700 flex items-center justify-between">
+          <span class="font-mono text-xs font-bold tracking-wider text-zinc-300">05 // MOTION SYNTHESIZER</span>
+          <span class="font-mono text-[10px] text-accent-emerald">AUTO-SCALE ON</span>
+        </div>
+
+        <div class="p-4 flex flex-col gap-3.5">
+          <div>
+            <label class="block font-mono text-[11px] font-semibold text-zinc-300 mb-1.5">MOTION PRESET</label>
+            <select id="sel-motion-preset" class="w-full bg-chassis-950 border border-chassis-700 rounded-lg px-3 py-2 font-mono text-xs text-zinc-200 focus:outline-none focus:border-accent-cyan">
+              <option value="idle">IDLE BREATHING (4 FRAMES)</option>
+              <option value="bounce">RHYTHM BOUNCE L/R (4 FRAMES)</option>
+              <option value="step">DANCE STEP & TILT (4 FRAMES)</option>
+              <option value="jump">HAPPY JUMP + SPARKLE (4 FRAMES)</option>
+              <option value="wave">WAVE / FLOATING SWAY (6 FRAMES)</option>
+              <option value="idol_combo">IDOL FULL SET (8 FRAMES)</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="flex justify-between font-mono text-[11px] text-zinc-400 mb-1">
+              <span>MOTION INTENSITY</span>
+              <span id="val-intensity" class="text-zinc-200">100%</span>
+            </div>
+            <input type="range" id="rng-intensity" min="30" max="200" value="100" oninput="updateParamLabel('intensity', this.value + '%')" class="w-full">
+            <p class="font-mono text-[10px] text-zinc-500 mt-1">
+              ※128px以上の高解像度時は振幅を自動スケーリング補正します
+            </p>
+          </div>
+
+          <div>
+            <label class="block font-mono text-[11px] font-semibold text-zinc-300 mb-1.5">AUTO PARTICLE DECORATION</label>
+            <select id="sel-auto-particle" class="w-full bg-chassis-950 border border-chassis-700 rounded-lg px-3 py-2 font-mono text-xs text-zinc-200 focus:outline-none focus:border-accent-cyan">
+              <option value="auto">PRESET DEFAULT</option>
+              <option value="none">DISABLE ALL</option>
+              <option value="sparkle">FORCE SPARKLE</option>
+              <option value="heart">FORCE HEART</option>
+              <option value="star">FORCE STAR</option>
+              <option value="note">FORCE MUSIC NOTE</option>
+            </select>
+          </div>
+
+          <button onclick="generateMotionFrames()" class="w-full py-2.5 px-4 rounded-lg font-mono text-xs font-bold bg-accent-cyan hover:bg-cyan-400 text-chassis-950 shadow-md transition flex items-center justify-center gap-2">
+            <span>GENERATE MOTION FRAMES</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MODULE 06: EXPORT & INTEGRATION -->
+      <div class="bg-chassis-900 border border-chassis-700 rounded-xl overflow-hidden shadow-lg flex-1 flex flex-col">
+        <div class="bg-chassis-850 px-4 py-2.5 border-b border-chassis-700 flex items-center justify-between">
+          <span class="font-mono text-xs font-bold tracking-wider text-zinc-300">06 // EXPORT & DATA BUS</span>
+          <span class="font-mono text-[10px] text-zinc-400">PNG / JSON</span>
+        </div>
+
+        <div class="p-4 flex flex-col gap-3.5 flex-1">
+          <!-- スプライトシート設定 -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-mono text-[10px] text-zinc-400 mb-1">SHEET LAYOUT</label>
+              <select id="sel-sheet-layout" onchange="updateExportInfo()" class="w-full bg-chassis-950 border border-chassis-700 rounded px-2 py-1.5 font-mono text-[11px] text-zinc-200">
+                <option value="horizontal">HORIZONTAL ROW</option>
+                <option value="grid">AUTO GRID (2-COL)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-mono text-[10px] text-zinc-400 mb-1">EXPORT SCALE</label>
+              <select id="sel-export-scale" onchange="updateExportInfo()" class="w-full bg-chassis-950 border border-chassis-700 rounded px-2 py-1.5 font-mono text-[11px] text-zinc-200">
+                <option value="1">1x (NATIVE PX)</option>
+                <option value="2">2x (CRISP UP)</option>
+                <option value="4">4x (HD SPRITE)</option>
+                <option value="0.5">0.5x (HALF)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="bg-chassis-950 border border-chassis-800 rounded px-3 py-2 font-mono text-[11px] text-zinc-400 flex justify-between">
+            <span>OUTPUT SIZE:</span>
+            <span id="export-dim-info" class="text-zinc-200">256 x 64 PX</span>
+          </div>
+
+          <!-- ダウンロードボタン群 -->
+          <div class="flex flex-col gap-2">
+            <button onclick="downloadSpriteSheet()" class="w-full py-2.5 px-3 rounded-lg font-mono text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow">
+              DOWNLOAD SPRITE SHEET (.PNG)
+            </button>
+            <button onclick="downloadSequentialPNGs()" class="w-full py-2 px-3 rounded-lg font-mono text-xs font-semibold bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-200 transition">
+              DOWNLOAD SEQUENTIAL PNGS
+            </button>
+          </div>
+
+          <!-- 他アプリ連携用JSON / DataURL出力 -->
+          <div class="pt-2 border-t border-chassis-800 flex flex-col gap-2 mt-auto">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-[10px] font-semibold text-zinc-400">APP INTEGRATION PAYLOAD</span>
+              <button onclick="copyIntegrationJSON()" class="px-2 py-0.5 rounded font-mono text-[10px] bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-accent-cyan transition">
+                COPY JSON
+              </button>
+            </div>
+            <textarea id="export-json-box" readonly rows="3" class="w-full bg-chassis-950 border border-chassis-800 rounded p-2 font-mono text-[10px] text-zinc-400 focus:outline-none resize-none" placeholder="JSON metadata & Base64 sprite sheet will appear here..."></textarea>
+            <button onclick="generateIntegrationJSON()" class="w-full py-1.5 px-3 rounded font-mono text-[11px] bg-chassis-850 hover:bg-chassis-800 border border-chassis-700 text-zinc-300 transition">
+              BUILD JSON + DATA URL
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- VIEW 2: REFERENCE / GUIDE (独立した解説タブ)                          -->
+  <!-- ===================================================================== -->
+  <section id="view-guide" class="hidden flex-1 max-w-[1200px] w-full mx-auto p-4 sm:p-6">
+    <div class="bg-chassis-900 border border-chassis-700 rounded-xl overflow-hidden shadow-xl">
+      <div class="bg-chassis-850 px-5 py-4 border-b border-chassis-700 flex items-center justify-between">
+        <div>
+          <h2 class="font-mono text-base font-bold text-zinc-100 tracking-wide">REFERENCE / SYSTEM GUIDE</h2>
+          <p class="text-xs text-zinc-400 mt-0.5">ピクセル変換アルゴリズム・モーション差分生成・書き出し仕様のリファレンス</p>
+        </div>
+        <button onclick="switchMainTab('studio')" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-accent-cyan transition">
+          RETURN TO WORKSTATION
+        </button>
+      </div>
+
+      <div class="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-zinc-300 leading-relaxed">
+
+        <!-- 解説ブロック 1 -->
+        <div class="bg-chassis-950/60 border border-chassis-800 rounded-lg p-4">
+          <h3 class="font-mono text-xs font-bold text-accent-cyan uppercase tracking-wider mb-2">01 // CHROMA KEY & AUTO TRIM (前処理・透過)</h3>
+          <p class="text-xs text-zinc-400 mb-2">
+            イラストの単色背景を透明化し、ドット絵化の際に余白でキャラクターが小さくなるのを防ぎます。
+          </p>
+          <ul class="text-xs text-zinc-300 space-y-1.5 list-disc list-inside">
+            <li><strong class="text-zinc-100">PICK BG COLOR:</strong> ボタンを押してから中央モニターの元画像をクリックすると、その色が透過基準色に設定されます。</li>
+            <li><strong class="text-zinc-100">TOLERANCE (許容誤差):</strong> JPEGの圧縮ノイズやグラデーション背景をまとめて抜きたい場合は数値を上げます（推奨: 20〜45）。</li>
+            <li><strong class="text-zinc-100">AUTO TRIM MARGINS:</strong> 透明部分を自動検出し、被写体がキャンバスいっぱいに収まるよう余白を切り詰めます。</li>
+          </ul>
+        </div>
+
+        <!-- 解説ブロック 2 -->
+        <div class="bg-chassis-950/60 border border-chassis-800 rounded-lg p-4">
+          <h3 class="font-mono text-xs font-bold text-accent-cyan uppercase tracking-wider mb-2">02 // RESOLUTION & PALETTE (解像度と減色)</h3>
+          <p class="text-xs text-zinc-400 mb-2">
+            用途に応じてレトロな低解像度から三桁の高精細ドットまで切り替え可能です。
+          </p>
+          <ul class="text-xs text-zinc-300 space-y-1.5 list-disc list-inside">
+            <li><strong class="text-zinc-100">16〜64 PX:</strong> 動きが軽快なミニキャラ、ゲームアイコン、ダンスユニット向け。</li>
+            <li><strong class="text-zinc-100">128〜256 PX:</strong> 髪型や衣装の細部を残す高精細ピクセルアート向け。</li>
+            <li><strong class="text-zinc-100">ORDERED DITHERING:</strong> 4x4ベイヤー行列を用いた網点処理です。色数を絞った際に滑らかな陰影の擬似グラデーションを作ります。</li>
+            <li><strong class="text-zinc-100">PIXEL OUTLINE:</strong> 透過境界の外側に1pxの縁取りを追加し、背景に埋もれないくっきりした輪郭を作ります。</li>
+          </ul>
+        </div>
+
+        <!-- 解説ブロック 3 -->
+        <div class="bg-chassis-950/60 border border-chassis-800 rounded-lg p-4">
+          <h3 class="font-mono text-xs font-bold text-accent-cyan uppercase tracking-wider mb-2">03 // MOTION SYNTHESIZER & AUTO-SCALING</h3>
+          <p class="text-xs text-zinc-400 mb-2">
+            静止画1枚からピクセル単位の変形・上下バウンス・波打ち・パーティクル合成を行い、複数コマの差分を自動生成します。
+          </p>
+          <ul class="text-xs text-zinc-300 space-y-1.5 list-disc list-inside">
+            <li><strong class="text-zinc-100">解像度自動スケーリング補正:</strong> 128pxや256pxなどの高解像度選択時、1px単位の移動では動きが小さくなりすぎるため、基準解像度（64px）に対する比率で移動幅を自動増幅します。</li>
+            <li><strong class="text-zinc-100">FRAME TIMELINE:</strong> 生成された各コマをクリックして選択し、個別にX/Y位置・縦伸縮（Squash）・パーティクルの種類を微調整できます。</li>
+          </ul>
+        </div>
+
+        <!-- 解説ブロック 4 -->
+        <div class="bg-chassis-950/60 border border-chassis-800 rounded-lg p-4">
+          <h3 class="font-mono text-xs font-bold text-accent-cyan uppercase tracking-wider mb-2">04 // SPRITE SHEET & APP INTEGRATION</h3>
+          <p class="text-xs text-zinc-400 mb-2">
+            他の自作HTMLアプリやゲームエンジンですぐに使える形式で出力します。すべての処理はブラウザ内のみで完結し、外部サーバーへの画像送信は一切行われません。
+          </p>
+          <ul class="text-xs text-zinc-300 space-y-1.5 list-disc list-inside">
+            <li><strong class="text-zinc-100">SPRITE SHEET (.PNG):</strong> 全コマを横一列またはグリッド状に連結した透過PNGを書き出します。</li>
+            <li><strong class="text-zinc-100">BUILD JSON + DATA URL:</strong> コマ数・1コマあたりの幅/高さ・FPS・画像のBase64文字列をまとめたJSONを生成します。自作の「音乗りクルー」やランチャー等へそのままコピペして渡せます。</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT ENGINE (完全ローカル処理・外部送信ゼロ)                    -->
+  <!-- ===================================================================== -->
+  <script>
+    // =========================================================================
+    // 1. アプリケーション状態管理 (STATE)
+    // =========================================================================
+    const state = {
+      sourceImage: null,       // 元画像 (HTMLImageElement or Canvas)
+      sourceAspect: 1,
+      chromaColor: { r: 255, g: 255, b: 255 },
+      isPickingColor: false,
+
+      // ピクセル化後のベースキャンバス（静止状態）
+      basePixelCanvas: document.createElement('canvas'),
+
+      // 生成されたアニメーションコマ配列
+      // 各要素: { canvas, dx, dy, sx, sy, tilt, wave, particle, label }
+      frames: [],
+      currentFrameIndex: 0,
+
+      // 再生・表示状態
+      isPlaying: true,
+      fps: 8,
+      lastFrameTime: 0,
+      monitorMode: 'anim', // 'anim' | 'base' | 'orig'
+      pipelineTimer: null
+    };
+
+    // 固定カラーパレット定義
+    const PALETTES = {
+      y2k: [
+        [255, 255, 255], [255, 228, 242], [255, 179, 217], [230, 153, 255],
+        [179, 217, 255], [153, 242, 229], [255, 242, 179], [140, 115, 166],
+        [92, 77, 125],   [255, 112, 166], [102, 178, 255], [45, 38, 64]
+      ],
+      gb: [
+        [15, 56, 15], [48, 98, 48], [139, 172, 15], [155, 188, 15]
+      ],
+      cyber: [
+        [10, 10, 18], [32, 24, 54], [6, 182, 212], [244, 63, 94], [168, 85, 247], [240, 249, 255]
+      ],
+      mono: [
+        [18, 18, 22], [244, 244, 248]
+      ]
+    };
+
+    // 4x4 ベイヤーディザリング行列
+    const BAYER_4X4 = [
+      [ 0,  8,  2, 10],
+      [12,  4, 14,  6],
+      [ 3, 11,  1,  9],
+      [15,  7, 13,  5]
+    ];
+
+    // =========================================================================
+    // 2. 初期化＆イベントリスナー
+    // =========================================================================
+    window.onload = function() {
+      setupEventListeners();
+      // 起動直後から操作感を試せるようデモキャラクターをロード
+      loadDemoCharacter('idol');
+      requestAnimationFrame(animationLoop);
+    };
+
+    function setupEventListeners() {
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('file-input');
+      const mainCanvas = document.getElementById('main-preview-canvas');
+
+      dropZone.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          loadImageFile(e.target.files[0]);
+        }
+      });
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-accent-cyan', 'bg-chassis-850');
+      });
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-accent-cyan', 'bg-chassis-850');
+      });
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-accent-cyan', 'bg-chassis-850');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadImageFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      // メインキャンバス上でのスポイト色取得
+      mainCanvas.addEventListener('click', (e) => {
+        if (!state.isPickingColor || !state.sourceImage) return;
+        pickColorFromCanvas(e, mainCanvas);
+      });
+    }
+
+    // =========================================================================
+    // 3. UI制御・タブ切替・トースト通知
+    // =========================================================================
+    function switchMainTab(tab) {
+      const studioView = document.getElementById('view-studio');
+      const guideView = document.getElementById('view-guide');
+      const tabStudio = document.getElementById('tab-studio');
+      const tabGuide = document.getElementById('tab-guide');
+
+      if (tab === 'studio') {
+        studioView.classList.remove('hidden');
+        guideView.classList.add('hidden');
+        tabStudio.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono text-xs font-semibold transition-all bg-chassis-800 text-accent-cyan border border-chassis-600 shadow-sm';
+        tabGuide.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono text-xs font-semibold transition-all text-zinc-400 hover:text-zinc-200';
+      } else {
+        studioView.classList.add('hidden');
+        guideView.classList.remove('hidden');
+        tabGuide.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono text-xs font-semibold transition-all bg-chassis-800 text-accent-cyan border border-chassis-600 shadow-sm';
+        tabStudio.className = 'px-3 sm:px-4 py-1.5 rounded-md font-mono text-xs font-semibold transition-all text-zinc-400 hover:text-zinc-200';
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const colorClass = type === 'error' ? 'border-rose-500 text-rose-200' : 'border-accent-cyan text-cyan-100';
+      el.className = `bg-chassis-900/95 border ${colorClass} px-3.5 py-2 rounded-lg shadow-xl font-mono text-xs backdrop-blur-md transition-opacity duration-300`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+      }, 2400);
+    }
+
+    function updateParamLabel(id, text) {
+      const el = document.getElementById(`val-${id}`);
+      if (el) el.textContent = text;
+    }
+
+    function setMonitorMode(mode) {
+      state.monitorMode = mode;
+      ['anim', 'base', 'orig'].forEach(m => {
+        const btn = document.getElementById(`btn-view-${m}`);
+        if (m === mode) {
+          btn.className = 'px-2.5 py-1 rounded font-mono text-[11px] bg-chassis-800 text-accent-cyan';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded font-mono text-[11px] text-zinc-400 hover:text-zinc-200';
+        }
+      });
+      renderMainPreview();
+    }
+
+    // =========================================================================
+    // 4. 画像読み込み＆内蔵デモキャラクター生成
+    // =========================================================================
+    function loadImageFile(file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('ERROR: INVALID IMAGE FILE', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          state.sourceImage = img;
+          state.sourceAspect = img.width / img.height;
+          document.getElementById('source-dim-badge').textContent = `${img.width} x ${img.height}`;
+          if (document.getElementById('chk-aspect').checked) {
+            handleAspectChange();
+          }
+          runFullPipeline();
+          showToast('IMAGE LOADED TO BUFFER');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 外部URLを使わずCanvas描画でテスト用デモキャラクターを生成
+    function loadDemoCharacter(type) {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, 128, 128);
+
+      if (type === 'idol') {
+        // Y2Kドリーミー系デフォルメキャラ（パステル配色）
+        // ツインテール＆ロングヘア
+        ctx.fillStyle = '#5c4d7d';
+        ctx.beginPath();
+        ctx.arc(64, 48, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(30, 44, 14, 46);
+        ctx.fillRect(84, 44, 14, 46);
+
+        // ヘアリボン（パステルピンク）
+        ctx.fillStyle = '#ff70a6';
+        ctx.fillRect(28, 36, 14, 10);
+        ctx.fillRect(86, 36, 14, 10);
+
+        // 顔
+        ctx.fillStyle = '#ffe8d6';
+        ctx.beginPath();
+        ctx.arc(64, 52, 22, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 前髪
+        ctx.fillStyle = '#5c4d7d';
+        ctx.beginPath();
+        ctx.arc(64, 46, 22, Math.PI, Math.PI * 2);
+        ctx.fill();
+
+        // 瞳
+        ctx.fillStyle = '#2d2640';
+        ctx.fillRect(54, 52, 5, 7);
+        ctx.fillRect(69, 52, 5, 7);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(55, 53, 2, 2);
+        ctx.fillRect(70, 53, 2, 2);
+
+        // チーク
+        ctx.fillStyle = '#ffb3d9';
+        ctx.fillRect(48, 60, 5, 3);
+        ctx.fillRect(75, 60, 5, 3);
+
+        // 衣装（パステルブルー＆ホワイトセーラー風）
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(48, 74, 32, 24);
+        ctx.fillStyle = '#66b2ff';
+        ctx.fillRect(44, 94, 40, 14);
+        // 胸リボン
+        ctx.fillStyle = '#ff70a6';
+        ctx.fillRect(60, 78, 8, 8);
+
+        // 腕・脚
+        ctx.fillStyle = '#ffe8d6';
+        ctx.fillRect(40, 76, 8, 18);
+        ctx.fillRect(80, 76, 8, 18);
+        ctx.fillRect(52, 108, 8, 12);
+        ctx.fillRect(68, 108, 8, 12);
+        // シューズ
+        ctx.fillStyle = '#2d2640';
+        ctx.fillRect(50, 118, 10, 6);
+        ctx.fillRect(68, 118, 10, 6);
+
+        document.getElementById('sel-palette').value = 'y2k';
+      } else {
+        // スタジオロボット（シアン＆ダークメタル）
+        ctx.fillStyle = '#3f3f4a';
+        ctx.fillRect(61, 14, 6, 14);
+        ctx.fillStyle = '#06b6d4';
+        ctx.beginPath();
+        ctx.arc(64, 14, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 頭部
+        ctx.fillStyle = '#d4d4d8';
+        ctx.fillRect(36, 28, 56, 42);
+        ctx.fillStyle = '#18181b';
+        ctx.fillRect(42, 36, 44, 24);
+
+        // LEDアイ
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillRect(48, 44, 10, 8);
+        ctx.fillRect(70, 44, 10, 8);
+
+        // ボディ
+        ctx.fillStyle = '#a1a1aa';
+        ctx.fillRect(42, 74, 44, 32);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(52, 82, 24, 12);
+
+        // アーム＆レッグ
+        ctx.fillStyle = '#52525b';
+        ctx.fillRect(30, 76, 10, 24);
+        ctx.fillRect(88, 76, 10, 24);
+        ctx.fillRect(48, 106, 10, 16);
+        ctx.fillRect(70, 106, 10, 16);
+
+        document.getElementById('sel-palette').value = '16';
+      }
+
+      state.sourceImage = c;
+      state.sourceAspect = 1;
+      document.getElementById('source-dim-badge').textContent = '128 x 128 (DEMO)';
+      document.getElementById('chk-chroma').checked = false;
+      runFullPipeline();
+    }
+
+    // =========================================================================
+    // 5. スポイト・背景透過・解像度コントロール
+    // =========================================================================
+    function toggleEyedropper() {
+      state.isPickingColor = !state.isPickingColor;
+      const btn = document.getElementById('btn-eyedropper');
+      const ind = document.getElementById('eyedropper-indicator');
+      if (state.isPickingColor) {
+        btn.classList.add('border-accent-amber', 'text-accent-amber');
+        ind.classList.remove('hidden');
+        setMonitorMode('orig');
+      } else {
+        btn.classList.remove('border-accent-amber', 'text-accent-amber');
+        ind.classList.add('hidden');
+      }
+    }
+
+    function pickColorFromCanvas(e, canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = Math.floor((e.clientX - rect.left) * scaleX);
+      const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+      const ctx = canvas.getContext('2d');
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      setChromaColor(pixel[0], pixel[1], pixel[2]);
+      document.getElementById('chk-chroma').checked = true;
+      toggleEyedropper();
+      setMonitorMode('anim');
+      runFullPipeline();
+      showToast(`CHROMA KEY SET: RGB(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`);
+    }
+
+    function autoPickCornerColor() {
+      if (!state.sourceImage) return;
+      const tmp = document.createElement('canvas');
+      tmp.width = state.sourceImage.width;
+      tmp.height = state.sourceImage.height;
+      const ctx = tmp.getContext('2d');
+      ctx.drawImage(state.sourceImage, 0, 0);
+      const p = ctx.getImageData(0, 0, 1, 1).data;
+      setChromaColor(p[0], p[1], p[2]);
+      document.getElementById('chk-chroma').checked = true;
+      runFullPipeline();
+      showToast('CORNER COLOR KEYED');
+    }
+
+    function setChromaColor(r, g, b) {
+      state.chromaColor = { r, g, b };
+      const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+      document.getElementById('chroma-swatch').style.backgroundColor = hex;
+      document.getElementById('chroma-hex').textContent = hex;
+    }
+
+    function resetToneParams() {
+      ['brightness', 'contrast', 'saturation', 'hue'].forEach(id => {
+        document.getElementById(`rng-${id}`).value = 0;
+        updateParamLabel(id, id === 'hue' ? '0°' : '0');
+      });
+      runFullPipeline();
+    }
+
+    function setResolutionPreset(size) {
+      document.querySelectorAll('.res-preset-btn').forEach(btn => {
+        if (parseInt(btn.textContent) === size) {
+          btn.className = 'res-preset-btn py-1.5 rounded font-mono text-xs bg-chassis-800 border-accent-cyan text-accent-cyan border transition';
+        } else {
+          btn.className = 'res-preset-btn py-1.5 rounded font-mono text-xs bg-chassis-800 hover:bg-chassis-700 border border-chassis-600 text-zinc-300 transition';
+        }
+      });
+
+      const keepAspect = document.getElementById('chk-aspect').checked;
+      if (keepAspect && state.sourceAspect) {
+        if (state.sourceAspect >= 1) {
+          document.getElementById('num-width').value = size;
+          document.getElementById('num-height').value = Math.max(8, Math.round(size / state.sourceAspect));
+        } else {
+          document.getElementById('num-height').value = size;
+          document.getElementById('num-width').value = Math.max(8, Math.round(size * state.sourceAspect));
+        }
+      } else {
+        document.getElementById('num-width').value = size;
+        document.getElementById('num-height').value = size;
+      }
+      updateAutoScaleBadge();
+      runFullPipeline();
+    }
+
+    function handleAspectChange() {
+      if (document.getElementById('chk-aspect').checked && state.sourceAspect) {
+        const w = parseInt(document.getElementById('num-width').value) || 64;
+        document.getElementById('num-height').value = Math.max(8, Math.round(w / state.sourceAspect));
+        updateAutoScaleBadge();
+        runFullPipeline();
+      }
+    }
+
+    function handleCustomDimInput(changed) {
+      const keepAspect = document.getElementById('chk-aspect').checked;
+      let w = Math.min(512, Math.max(8, parseInt(document.getElementById('num-width').value) || 64));
+      let h = Math.min(512, Math.max(8, parseInt(document.getElementById('num-height').value) || 64));
+
+      if (keepAspect && state.sourceAspect) {
+        if (changed === 'w') {
+          h = Math.min(512, Math.max(8, Math.round(w / state.sourceAspect)));
+        } else {
+          w = Math.min(512, Math.max(8, Math.round(h * state.sourceAspect)));
+        }
+      }
+      document.getElementById('num-width').value = w;
+      document.getElementById('num-height').value = h;
+      updateAutoScaleBadge();
+      runFullPipeline();
+    }
+
+    function getResolutionScaleFactor() {
+      const w = parseInt(document.getElementById('num-width').value) || 64;
+      const h = parseInt(document.getElementById('num-height').value) || 64;
+      const maxDim = Math.max(w, h);
+      // 64pxを基準(1.0x)とし、128pxでは2.0x、256pxでは4.0xの振幅スケーリングを返す
+      return Math.max(0.5, maxDim / 64);
+    }
+
+    function updateAutoScaleBadge() {
+      const factor = getResolutionScaleFactor();
+      document.getElementById('auto-scale-badge').textContent = `SCALE: ${factor.toFixed(1)}x`;
+    }
+
+    // =========================================================================
+    // 6. コア画像処理パイプライン (前処理 -> 減色/ディザ -> アウトライン)
+    // =========================================================================
+    function schedulePipeline() {
+      clearTimeout(state.pipelineTimer);
+      state.pipelineTimer = setTimeout(() => {
+        runFullPipeline();
+      }, 40);
+    }
+
+    function runFullPipeline() {
+      if (!state.sourceImage) return;
+
+      const targetW = parseInt(document.getElementById('num-width').value) || 64;
+      const targetH = parseInt(document.getElementById('num-height').value) || 64;
+
+      // STEP 1: 元画像サイズで前処理（クロマキー透過＆色調補正）
+      const prepCanvas = document.createElement('canvas');
+      prepCanvas.width = state.sourceImage.width;
+      prepCanvas.height = state.sourceImage.height;
+      const pCtx = prepCanvas.getContext('2d');
+      pCtx.drawImage(state.sourceImage, 0, 0);
+
+      const imgData = pCtx.getImageData(0, 0, prepCanvas.width, prepCanvas.height);
+      applyPreProcessFilters(imgData);
+      pCtx.putImageData(imgData, 0, 0);
+
+      // STEP 2: 余白自動トリミング（ONの場合）
+      let cropBox = { x: 0, y: 0, w: prepCanvas.width, h: prepCanvas.height };
+      if (document.getElementById('chk-trim').checked) {
+        cropBox = computeAlphaBoundingBox(imgData);
+      }
+
+      // STEP 3: ターゲット解像度へニアレストネイバー縮小描画
+      const pixCanvas = state.basePixelCanvas;
+      pixCanvas.width = targetW;
+      pixCanvas.height = targetH;
+      const pixCtx = pixCanvas.getContext('2d');
+      pixCtx.imageSmoothingEnabled = false;
+      pixCtx.clearRect(0, 0, targetW, targetH);
+
+      // アスペクト比を維持しつつ中央配置（トリミング時も枠内に収める）
+      const scale = Math.min(targetW / cropBox.w, targetH / cropBox.h);
+      const drawW = Math.max(1, Math.round(cropBox.w * scale));
+      const drawH = Math.max(1, Math.round(cropBox.h * scale));
+      const offsetX = Math.floor((targetW - drawW) / 2);
+      const offsetY = Math.floor((targetH - drawH) / 2);
+
+      pixCtx.drawImage(
+        prepCanvas,
+        cropBox.x, cropBox.y, cropBox.w, cropBox.h,
+        offsetX, offsetY, drawW, drawH
+      );
+
+      // STEP 4: パレット減色＆ディザリング
+      const pixData = pixCtx.getImageData(0, 0, targetW, targetH);
+      applyQuantizationAndDither(pixData);
+      pixCtx.putImageData(pixData, 0, 0);
+
+      // STEP 5: アウトライン強調・縁取り
+      const outlineMode = document.getElementById('sel-outline').value;
+      if (outlineMode !== 'none') {
+        applyPixelOutline(pixCtx, targetW, targetH, outlineMode);
+      }
+
+      // モーションフレームが未生成なら初回生成、既存があればベース絵更新を反映
+      if (state.frames.length === 0) {
+        generateMotionFrames();
+      } else {
+        rebuildFramesFromBase();
+      }
+    }
+
+    function applyPreProcessFilters(imgData) {
+      const data = imgData.data;
+      const useChroma = document.getElementById('chk-chroma').checked;
+      const tol = parseInt(document.getElementById('rng-tolerance').value) || 0;
+      const tolSq = (tol * 1.732) ** 2; // RGBユークリッド距離の閾値
+      const kr = state.chromaColor.r, kg = state.chromaColor.g, kb = state.chromaColor.b;
+
+      const brightness = (parseInt(document.getElementById('rng-brightness').value) || 0) * 2.55;
+      const contrastVal = parseInt(document.getElementById('rng-contrast').value) || 0;
+      const contrastFactor = (259 * (contrastVal + 255)) / (255 * (259 - contrastVal));
+      const satVal = (parseInt(document.getElementById('rng-saturation').value) || 0) / 100 + 1;
+      const hueDeg = parseInt(document.getElementById('rng-hue').value) || 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        let a = data[i + 3];
+        if (a === 0) continue;
+
+        let r = data[i], g = data[i + 1], b = data[i + 2];
+
+        // クロマキー透過判定
+        if (useChroma) {
+          const distSq = (r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2;
+          if (distSq <= tolSq) {
+            data[i + 3] = 0;
+            continue;
+          }
+        }
+
+        // 明度＆コントラスト
+        r = contrastFactor * (r + brightness - 128) + 128;
+        g = contrastFactor * (g + brightness - 128) + 128;
+        b = contrastFactor * (b + brightness - 128) + 128;
+
+        // 彩度
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = lum + (r - lum) * satVal;
+        g = lum + (g - lum) * satVal;
+        b = lum + (b - lum) * satVal;
+
+        // 色相シフト（簡易回転行列）
+        if (hueDeg !== 0) {
+          const rad = hueDeg * Math.PI / 180;
+          const cosA = Math.cos(rad);
+          const sinA = Math.sin(rad);
+          const nr = r * (0.299 + 0.701 * cosA + 0.168 * sinA) + g * (0.587 - 0.587 * cosA + 0.330 * sinA) + b * (0.114 - 0.114 * cosA - 0.497 * sinA);
+          const ng = r * (0.299 - 0.299 * cosA - 0.328 * sinA) + g * (0.587 + 0.413 * cosA + 0.035 * sinA) + b * (0.114 - 0.114 * cosA + 0.292 * sinA);
+          const nb = r * (0.299 - 0.300 * cosA + 1.250 * sinA) + g * (0.587 - 0.588 * cosA - 1.050 * sinA) + b * (0.114 + 0.886 * cosA - 0.203 * sinA);
+          r = nr; g = ng; b = nb;
+        }
+
+        data[i]     = Math.min(255, Math.max(0, r));
+        data[i + 1] = Math.min(255, Math.max(0, g));
+        data[i + 2] = Math.min(255, Math.max(0, b));
+      }
+    }
+
+    function computeAlphaBoundingBox(imgData) {
+      const { width, height, data } = imgData;
+      let minX = width, minY = height, maxX = 0, maxY = 0;
+      let found = false;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const a = data[(y * width + x) * 4 + 3];
+          if (a > 20) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            found = true;
+          }
+        }
+      }
+      if (!found) return { x: 0, y: 0, w: width, h: height };
+      return {
+        x: minX,
+        y: minY,
+        w: Math.max(1, maxX - minX + 1),
+        h: Math.max(1, maxY - minY + 1)
+      };
+    }
+
+    function applyQuantizationAndDither(imgData) {
+      const mode = document.getElementById('sel-palette').value;
+      if (mode === 'full') return;
+
+      const { width, height, data } = imgData;
+      const useDither = document.getElementById('chk-dither').checked;
+      const ditherStrength = (parseInt(document.getElementById('rng-dither').value) || 0) / 100 * 48;
+
+      // パレットの構築（固定パレット or 画像からの適応抽出）
+      let palette = PALETTES[mode];
+      if (!palette) {
+        const k = parseInt(mode) || 16;
+        palette = buildAdaptivePalette(data, k);
+      }
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          if (data[idx + 3] < 128) {
+            data[idx + 3] = 0; // ドット絵らしくアルファを2値化
+            continue;
+          }
+          data[idx + 3] = 255;
+
+          let r = data[idx], g = data[idx + 1], b = data[idx + 2];
+
+          if (useDither) {
+            const bayerVal = (BAYER_4X4[y % 4][x % 4] / 16 - 0.5) * ditherStrength;
+            r += bayerVal;
+            g += bayerVal;
+            b += bayerVal;
+          }
+
+          const nearest = findNearestPaletteColor(r, g, b, palette);
+          data[idx]     = nearest[0];
+          data[idx + 1] = nearest[1];
+          data[idx + 2] = nearest[2];
+        }
+      }
+    }
+
+    // 代表色抽出（高速メディアンカット・量子化バケット）
+    function buildAdaptivePalette(data, maxColors) {
+      const colorMap = new Map();
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 128) continue;
+        // 5bit量子化でヒストグラム化
+        const qr = data[i] & 0xF8;
+        const qg = data[i + 1] & 0xF8;
+        const qb = data[i + 2] & 0xF8;
+        const key = (qr << 16) | (qg << 8) | qb;
+        colorMap.set(key, (colorMap.get(key) || 0) + 1);
+      }
+
+      const sorted = Array.from(colorMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([key]) => [(key >> 16) & 0xFF, (key >> 8) & 0xFF, key & 0xFF]);
+
+      if (sorted.length <= maxColors) {
+        return sorted.length > 0 ? sorted : [[0, 0, 0]];
+      }
+
+      // 頻度上位から色の距離が離れたものを優先選出
+      const chosen = [sorted[0]];
+      for (let i = 1; i < sorted.length && chosen.length < maxColors; i++) {
+        const cand = sorted[i];
+        const minDist = chosen.reduce((min, c) => {
+          const d = (c[0] - cand[0]) ** 2 + (c[1] - cand[1]) ** 2 + (c[2] - cand[2]) ** 2;
+          return Math.min(min, d);
+        }, Infinity);
+        if (minDist > 900) {
+          chosen.push(cand);
+        }
+      }
+      // 枠が余っていれば上から補充
+      for (let i = 1; i < sorted.length && chosen.length < maxColors; i++) {
+        if (!chosen.includes(sorted[i])) chosen.push(sorted[i]);
+      }
+      return chosen;
+    }
+
+    function findNearestPaletteColor(r, g, b, palette) {
+      let best = palette[0];
+      let minDist = Infinity;
+      for (let i = 0; i < palette.length; i++) {
+        const p = palette[i];
+        // 人間の視覚特性に寄せた重み付き距離
+        const dr = r - p[0], dg = g - p[1], db = b - p[2];
+        const dist = dr * dr * 0.3 + dg * dg * 0.59 + db * db * 0.11;
+        if (dist < minDist) {
+          minDist = dist;
+          best = p;
+        }
+      }
+      return best;
+    }
+
+    function applyPixelOutline(ctx, w, h, mode) {
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const src = new Uint8ClampedArray(imgData.data);
+      const dst = imgData.data;
+
+      const hex = document.getElementById('col-outline').value;
+      const or = parseInt(hex.slice(1, 3), 16);
+      const og = parseInt(hex.slice(3, 5), 16);
+      const ob = parseInt(hex.slice(5, 7), 16);
+
+      const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const idx = (y * w + x) * 4;
+          const alpha = src[idx + 3];
+
+          if (mode === 'outer' && alpha === 0) {
+            // 透明ピクセルの4近傍に不透明ピクセルがあれば縁取りを描画
+            let touchesOpaque = false;
+            for (const [dx, dy] of dirs) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                if (src[(ny * w + nx) * 4 + 3] > 0) {
+                  touchesOpaque = true;
+                  break;
+                }
+              }
+            }
+            if (touchesOpaque) {
+              dst[idx] = or; dst[idx + 1] = og; dst[idx + 2] = ob; dst[idx + 3] = 255;
+            }
+          } else if (mode === 'edge' && alpha > 0) {
+            // 内部輪郭強調：透明に接する不透明ピクセル自体を暗く縁取り
+            let touchesTransparent = (x === 0 || y === 0 || x === w - 1 || y === h - 1);
+            if (!touchesTransparent) {
+              for (const [dx, dy] of dirs) {
+                const nx = x + dx, ny = y + dy;
+                if (src[(ny * w + nx) * 4 + 3] === 0) {
+                  touchesTransparent = true;
+                  break;
+                }
+              }
+            }
+            if (touchesTransparent) {
+              dst[idx] = or; dst[idx + 1] = og; dst[idx + 2] = ob;
+            }
+          }
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    // =========================================================================
+    // 7. モーション差分生成エンジン（三桁解像度自動スケーリング対応）
+    // =========================================================================
+    function generateMotionFrames() {
+      if (!state.sourceImage) return;
+
+      const preset = document.getElementById('sel-motion-preset').value;
+      const intensity = (parseInt(document.getElementById('rng-intensity').value) || 100) / 100;
+      const particleOverride = document.getElementById('sel-auto-particle').value;
+
+      // 解像度に応じた自動スケーリング補正（128px以上で動きが小さくならないよう増幅）
+      const resScale = getResolutionScaleFactor() * intensity;
+      const u = Math.max(1, Math.round(resScale)); // 基本1px移動単位のスケール
+
+      let recipes = [];
+
+      if (preset === 'idle') {
+        recipes = [
+          { label: 'IDLE 1', dx: 0, dy: 0, sx: 1.00, sy: 1.00, tilt: 0, wave: 0, particle: 'none' },
+          { label: 'IDLE 2', dx: 0, dy: u, sx: 1.03, sy: 0.96, tilt: 0, wave: 0, particle: 'none' },
+          { label: 'IDLE 3', dx: 0, dy: u * 2, sx: 1.05, sy: 0.93, tilt: 0, wave: 0, particle: 'none' },
+          { label: 'IDLE 4', dx: 0, dy: u, sx: 1.03, sy: 0.96, tilt: 0, wave: 0, particle: 'none' },
+        ];
+      } else if (preset === 'bounce') {
+        recipes = [
+          { label: 'BOUNCE L', dx: -u * 2, dy: u * 2, sx: 1.06, sy: 0.92, tilt: -0.05, wave: 0, particle: 'none' },
+          { label: 'UP 1',     dx: 0,      dy: -u * 2, sx: 0.96, sy: 1.04, tilt: 0,     wave: 0, particle: 'sparkle' },
+          { label: 'BOUNCE R', dx: u * 2,  dy: u * 2, sx: 1.06, sy: 0.92, tilt: 0.05,  wave: 0, particle: 'none' },
+          { label: 'UP 2',     dx: 0,      dy: -u * 2, sx: 0.96, sy: 1.04, tilt: 0,     wave: 0, particle: 'sparkle' },
+        ];
+      } else if (preset === 'step') {
+        recipes = [
+          { label: 'STEP L',   dx: -u * 3, dy: -u, sx: 1.00, sy: 1.02, tilt: -0.09, wave: 0, particle: 'note' },
+          { label: 'CENTER 1', dx: 0,      dy: u,  sx: 1.04, sy: 0.95, tilt: 0,     wave: 0, particle: 'none' },
+          { label: 'STEP R',   dx: u * 3,  dy: -u, sx: 1.00, sy: 1.02, tilt: 0.09,  wave: 0, particle: 'note' },
+          { label: 'CENTER 2', dx: 0,      dy: u,  sx: 1.04, sy: 0.95, tilt: 0,     wave: 0, particle: 'none' },
+        ];
+      } else if (preset === 'jump') {
+        recipes = [
+          { label: 'CROUCH', dx: 0, dy: u * 3,  sx: 1.10, sy: 0.86, tilt: 0,     wave: 0, particle: 'none' },
+          { label: 'RISE',   dx: 0, dy: -u * 4, sx: 0.92, sy: 1.08, tilt: -0.04, wave: 0, particle: 'star' },
+          { label: 'APEX',   dx: 0, dy: -u * 6, sx: 0.95, sy: 1.05, tilt: 0.04,  wave: 0, particle: 'heart' },
+          { label: 'LAND',   dx: 0, dy: u * 2,  sx: 1.08, sy: 0.90, tilt: 0,     wave: 0, particle: 'sparkle' },
+        ];
+      } else if (preset === 'wave') {
+        recipes = [
+          { label: 'WAVE 1', dx: 0, dy: -u, sx: 1, sy: 1, tilt: 0, wave: 1, particle: 'none' },
+          { label: 'WAVE 2', dx: 0, dy: -u * 2, sx: 1, sy: 1, tilt: 0, wave: 2, particle: 'sparkle' },
+          { label: 'WAVE 3', dx: 0, dy: -u, sx: 1, sy: 1, tilt: 0, wave: 3, particle: 'none' },
+          { label: 'WAVE 4', dx: 0, dy: 0, sx: 1, sy: 1, tilt: 0, wave: 4, particle: 'none' },
+          { label: 'WAVE 5', dx: 0, dy: u, sx: 1, sy: 1, tilt: 0, wave: 5, particle: 'sparkle' },
+          { label: 'WAVE 6', dx: 0, dy: 0, sx: 1, sy: 1, tilt: 0, wave: 6, particle: 'none' },
+        ];
+      } else if (preset === 'idol_combo') {
+        recipes = [
+          { label: 'POSE 1', dx: -u * 2, dy: u,      sx: 1.04, sy: 0.95, tilt: -0.06, wave: 0, particle: 'none' },
+          { label: 'POSE 2', dx: -u * 2, dy: -u * 2, sx: 0.97, sy: 1.03, tilt: -0.04, wave: 0, particle: 'heart' },
+          { label: 'POSE 3', dx: u * 2,  dy: u,      sx: 1.04, sy: 0.95, tilt: 0.06,  wave: 0, particle: 'none' },
+          { label: 'POSE 4', dx: u * 2,  dy: -u * 2, sx: 0.97, sy: 1.03, tilt: 0.04,  wave: 0, particle: 'sparkle' },
+          { label: 'READY',  dx: 0,      dy: u * 3,  sx: 1.10, sy: 0.87, tilt: 0,     wave: 0, particle: 'none' },
+          { label: 'JUMP!',  dx: 0,      dy: -u * 5, sx: 0.93, sy: 1.07, tilt: 0.05,  wave: 0, particle: 'star' },
+          { label: 'SHINE',  dx: 0,      dy: -u * 4, sx: 0.96, sy: 1.04, tilt: -0.05, wave: 0, particle: 'heart' },
+          { label: 'FINISH', dx: 0,      dy: u,      sx: 1.05, sy: 0.94, tilt: 0,     wave: 0, particle: 'sparkle' },
+        ];
+      }
+
+      state.frames = recipes.map((r, idx) => {
+        const finalParticle = particleOverride === 'auto' ? r.particle : particleOverride;
+        const frameObj = {
+          label: r.label,
+          dx: r.dx,
+          dy: r.dy,
+          sx: r.sx,
+          sy: r.sy,
+          tilt: r.tilt,
+          wave: r.wave,
+          waveSeed: idx,
+          particle: finalParticle,
+          canvas: document.createElement('canvas')
+        };
+        renderSingleFrameCanvas(frameObj);
+        return frameObj;
+      });
+
+      state.currentFrameIndex = 0;
+      renderTimelineStrip();
+      syncFrameInspectorUI();
+      renderMainPreview();
+      updateExportInfo();
+      showToast(`GENERATED ${state.frames.length} FRAMES`);
+    }
+
+    function rebuildFramesFromBase() {
+      state.frames.forEach(f => renderSingleFrameCanvas(f));
+      renderTimelineStrip();
+      renderMainPreview();
+      updateExportInfo();
+    }
+
+    // 1コマ分の差分ピクセル画像を合成描画
+    function renderSingleFrameCanvas(frame) {
+      const base = state.basePixelCanvas;
+      const w = base.width;
+      const h = base.height;
+      const c = frame.canvas;
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, w, h);
+
+      // 波打ち変形モードの場合（走査線ごとの横揺れ）
+      if (frame.wave > 0) {
+        const amp = Math.max(1, Math.round(getResolutionScaleFactor() * 1.5));
+        const phase = (frame.waveSeed / 6) * Math.PI * 2;
+        for (let y = 0; y < h; y++) {
+          const shiftX = Math.round(Math.sin((y / h) * Math.PI * 2 + phase) * amp);
+          const destY = y + frame.dy;
+          if (destY >= 0 && destY < h) {
+            ctx.drawImage(base, 0, y, w, 1, shiftX + frame.dx, destY, w, 1);
+          }
+        }
+      } else {
+        // 足元（底辺中央）をアンカーにして伸縮・傾き・平行移動
+        ctx.save();
+        const anchorX = Math.round(w / 2 + frame.dx);
+        const anchorY = Math.round(h - Math.max(1, Math.round(h * 0.04)) + frame.dy);
+        ctx.translate(anchorX, anchorY);
+        if (frame.tilt) ctx.rotate(frame.tilt);
+        ctx.scale(frame.sx, frame.sy);
+        ctx.drawImage(base, Math.round(-w / 2), Math.round(-h + Math.max(1, Math.round(h * 0.04))));
+        ctx.restore();
+      }
+
+      // ドット絵パーティクル合成
+      if (frame.particle && frame.particle !== 'none') {
+        drawPixelParticles(ctx, w, h, frame.particle, frame.waveSeed || 0);
+      }
+    }
+
+    function drawPixelParticles(ctx, w, h, type, seed) {
+      const scale = Math.max(1, Math.floor(Math.min(w, h) / 32));
+      const positions = [
+        { x: Math.round(w * 0.16), y: Math.round(h * 0.22) },
+        { x: Math.round(w * 0.82), y: Math.round(h * 0.18) },
+        { x: Math.round(w * 0.85), y: Math.round(h * 0.55) },
+      ];
+
+      positions.forEach((pos, i) => {
+        const oy = ((seed + i) % 2 === 0) ? 0 : -scale;
+        const px = pos.x;
+        const py = pos.y + oy;
+
+        if (type === 'sparkle') {
+          ctx.fillStyle = (i % 2 === 0) ? '#fef08a' : '#67e8f9';
+          ctx.fillRect(px, py - scale * 2, scale, scale * 5);
+          ctx.fillRect(px - scale * 2, py, scale * 5, scale);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(px, py, scale, scale);
+        } else if (type === 'heart') {
+          ctx.fillStyle = '#fb7185';
+          const pattern = [
+            [0,1,0,1,0],
+            [1,1,1,1,1],
+            [1,1,1,1,1],
+            [0,1,1,1,0],
+            [0,0,1,0,0]
+          ];
+          drawBitmapPattern(ctx, pattern, px - scale * 2, py - scale * 2, scale);
+        } else if (type === 'star') {
+          ctx.fillStyle = '#facc15';
+          const pattern = [
+            [0,0,1,0,0],
+            [1,1,1,1,1],
+            [0,1,1,1,0],
+            [1,1,0,1,1],
+            [1,0,0,0,1]
+          ];
+          drawBitmapPattern(ctx, pattern, px - scale * 2, py - scale * 2, scale);
+        } else if (type === 'note') {
+          ctx.fillStyle = '#38bdf8';
+          const pattern = [
+            [0,0,1,1,1],
+            [0,0,1,0,1],
+            [0,0,1,0,0],
+            [1,1,1,0,0],
+            [1,1,1,0,0]
+          ];
+          drawBitmapPattern(ctx, pattern, px - scale * 2, py - scale * 2, scale);
+        }
+      });
+    }
+
+    function drawBitmapPattern(ctx, pattern, startX, startY, s) {
+      for (let r = 0; r < pattern.length; r++) {
+        for (let c = 0; c < pattern[r].length; c++) {
+          if (pattern[r][c]) {
+            ctx.fillRect(startX + c * s, startY + r * s, s, s);
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // 8. タイムライン編集・プレビュー再生ループ
+    // =========================================================================
+    function renderTimelineStrip() {
+      const strip = document.getElementById('timeline-strip');
+      strip.innerHTML = '';
+
+      state.frames.forEach((frame, idx) => {
+        const isSelected = idx === state.currentFrameIndex;
+        const card = document.createElement('div');
+        card.className = `shrink-0 w-20 rounded-lg border p-1.5 flex flex-col items-center gap-1 cursor-pointer transition ${
+          isSelected
+            ? 'bg-chassis-800 border-accent-cyan shadow-[0_0_10px_rgba(6,182,212,0.2)]'
+            : 'bg-chassis-900 border-chassis-700 hover:border-chassis-500'
+        }`;
+        card.onclick = () => {
+          state.currentFrameIndex = idx;
+          renderTimelineStrip();
+          syncFrameInspectorUI();
+          renderMainPreview();
+        };
+
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'w-14 h-14 checkerboard rounded flex items-center justify-center overflow-hidden';
+
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = frame.canvas.width;
+        thumbCanvas.height = frame.canvas.height;
+        thumbCanvas.className = 'pixelated max-w-full max-h-full';
+        const tCtx = thumbCanvas.getContext('2d');
+        tCtx.imageSmoothingEnabled = false;
+        tCtx.drawImage(frame.canvas, 0, 0);
+
+        thumbWrap.appendChild(thumbCanvas);
+
+        const caption = document.createElement('span');
+        caption.className = `font-mono text-[10px] truncate w-full text-center ${isSelected ? 'text-accent-cyan font-bold' : 'text-zinc-400'}`;
+        caption.textContent = `#${idx + 1} ${frame.label}`;
+
+        card.appendChild(thumbWrap);
+        card.appendChild(caption);
+        strip.appendChild(card);
+      });
+    }
+
+    function syncFrameInspectorUI() {
+      const f = state.frames[state.currentFrameIndex];
+      if (!f) return;
+      document.getElementById('rng-frame-dx').value = f.dx;
+      document.getElementById('val-frame-dx').textContent = f.dx;
+      document.getElementById('rng-frame-dy').value = f.dy;
+      document.getElementById('val-frame-dy').textContent = f.dy;
+      document.getElementById('rng-frame-sy').value = Math.round(f.sy * 100);
+      document.getElementById('val-frame-sy').textContent = f.sy.toFixed(2);
+      document.getElementById('sel-frame-particle').value = f.particle || 'none';
+    }
+
+    function updateCurrentFrameParam(key, value) {
+      const f = state.frames[state.currentFrameIndex];
+      if (!f) return;
+      f[key] = value;
+      if (key === 'sy') {
+        f.sx = Number((2 - value).toFixed(2)); // 体積保存風の横伸縮連動
+        document.getElementById('val-frame-sy').textContent = value.toFixed(2);
+      } else if (key === 'dx' || key === 'dy') {
+        document.getElementById(`val-frame-${key}`).textContent = value;
+      }
+      renderSingleFrameCanvas(f);
+      renderTimelineStrip();
+      renderMainPreview();
+    }
+
+    function addBlankFrame() {
+      const newFrame = {
+        label: 'CUSTOM',
+        dx: 0, dy: 0, sx: 1, sy: 1, tilt: 0, wave: 0,
+        waveSeed: state.frames.length,
+        particle: 'none',
+        canvas: document.createElement('canvas')
+      };
+      renderSingleFrameCanvas(newFrame);
+      state.frames.push(newFrame);
+      state.currentFrameIndex = state.frames.length - 1;
+      renderTimelineStrip();
+      syncFrameInspectorUI();
+      renderMainPreview();
+      updateExportInfo();
+    }
+
+    function duplicateCurrentFrame() {
+      const src = state.frames[state.currentFrameIndex];
+      if (!src) return;
+      const copy = {
+        ...src,
+        label: `${src.label}*`,
+        canvas: document.createElement('canvas')
+      };
+      renderSingleFrameCanvas(copy);
+      state.frames.splice(state.currentFrameIndex + 1, 0, copy);
+      state.currentFrameIndex++;
+      renderTimelineStrip();
+      syncFrameInspectorUI();
+      renderMainPreview();
+      updateExportInfo();
+    }
+
+    function deleteCurrentFrame() {
+      if (state.frames.length <= 1) {
+        showToast('MINIMUM 1 FRAME REQUIRED', 'error');
+        return;
+      }
+      state.frames.splice(state.currentFrameIndex, 1);
+      state.currentFrameIndex = Math.min(state.currentFrameIndex, state.frames.length - 1);
+      renderTimelineStrip();
+      syncFrameInspectorUI();
+      renderMainPreview();
+      updateExportInfo();
+    }
+
+    function togglePlay() {
+      state.isPlaying = !state.isPlaying;
+      const btn = document.getElementById('btn-play-toggle');
+      btn.textContent = state.isPlaying ? 'PAUSE' : 'PLAY';
+      btn.className = state.isPlaying
+        ? 'px-3.5 py-1.5 rounded-md font-mono text-xs font-bold bg-accent-cyan text-chassis-950 hover:bg-cyan-400 transition shadow'
+        : 'px-3.5 py-1.5 rounded-md font-mono text-xs font-bold bg-accent-emerald text-chassis-950 hover:bg-emerald-400 transition shadow';
+    }
+
+    function stepFrame(delta) {
+      if (state.frames.length === 0) return;
+      state.isPlaying = false;
+      document.getElementById('btn-play-toggle').textContent = 'PLAY';
+      state.currentFrameIndex = (state.currentFrameIndex + delta + state.frames.length) % state.frames.length;
+      renderTimelineStrip();
+      syncFrameInspectorUI();
+      renderMainPreview();
+    }
+
+    function updateFPS(val) {
+      state.fps = parseInt(val) || 8;
+      document.getElementById('val-fps').textContent = state.fps;
+    }
+
+    function animationLoop(timestamp) {
+      if (state.isPlaying && state.frames.length > 0 && state.monitorMode === 'anim') {
+        const interval = 1000 / state.fps;
+        if (timestamp - state.lastFrameTime >= interval) {
+          state.lastFrameTime = timestamp;
+          state.currentFrameIndex = (state.currentFrameIndex + 1) % state.frames.length;
+          renderTimelineStrip();
+          syncFrameInspectorUI();
+          renderMainPreview();
+        }
+      }
+      requestAnimationFrame(animationLoop);
+    }
+
+    function renderMainPreview() {
+      const canvas = document.getElementById('main-preview-canvas');
+      const ctx = canvas.getContext('2d');
+
+      let targetSource = null;
+      if (state.monitorMode === 'orig') {
+        targetSource = state.sourceImage;
+      } else if (state.monitorMode === 'base') {
+        targetSource = state.basePixelCanvas;
+      } else {
+        const f = state.frames[state.currentFrameIndex];
+        targetSource = f ? f.canvas : state.basePixelCanvas;
+      }
+
+      if (!targetSource || !targetSource.width) return;
+
+      // 画面上でドットの輪郭がくっきり見えるよう整数倍拡大して描画
+      const displayScale = Math.max(1, Math.floor(380 / Math.max(targetSource.width, targetSource.height)));
+      canvas.width = targetSource.width * displayScale;
+      canvas.height = targetSource.height * displayScale;
+
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(targetSource, 0, 0, canvas.width, canvas.height);
+
+      // ピクセルグリッド表示
+      if (document.getElementById('chk-grid-overlay').checked && state.monitorMode !== 'orig' && displayScale >= 3) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let x = 0; x <= canvas.width; x += displayScale) {
+          ctx.moveTo(x + 0.5, 0);
+          ctx.lineTo(x + 0.5, canvas.height);
+        }
+        for (let y = 0; y <= canvas.height; y += displayScale) {
+          ctx.moveTo(0, y + 0.5);
+          ctx.lineTo(canvas.width, y + 0.5);
+        }
+        ctx.stroke();
+      }
+
+      document.getElementById('hud-res').textContent = `${targetSource.width} x ${targetSource.height} PX`;
+      document.getElementById('hud-frame').textContent = state.monitorMode === 'anim'
+        ? `FRAME ${state.currentFrameIndex + 1} / ${state.frames.length}`
+        : state.monitorMode.toUpperCase();
+    }
+
+    // =========================================================================
+    // 9. スプライトシート＆連番PNG＆連携JSONエクスポート
+    // =========================================================================
+    function buildSpriteSheetCanvas() {
+      if (state.frames.length === 0) return null;
+
+      const layout = document.getElementById('sel-sheet-layout').value;
+      const exportScale = parseFloat(document.getElementById('sel-export-scale').value) || 1;
+
+      const fw = Math.max(1, Math.round(state.frames[0].canvas.width * exportScale));
+      const fh = Math.max(1, Math.round(state.frames[0].canvas.height * exportScale));
+      const count = state.frames.length;
+
+      const cols = layout === 'grid' ? Math.min(2, count) : count;
+      const rows = Math.ceil(count / cols);
+
+      const sheet = document.createElement('canvas');
+      sheet.width = fw * cols;
+      sheet.height = fh * rows;
+      const ctx = sheet.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+
+      state.frames.forEach((f, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        ctx.drawImage(f.canvas, col * fw, row * fh, fw, fh);
+      });
+
+      return { canvas: sheet, frameW: fw, frameH: fh, cols, rows, count };
+    }
+
+    function updateExportInfo() {
+      const info = buildSpriteSheetCanvas();
+      if (!info) return;
+      document.getElementById('export-dim-info').textContent = `${info.canvas.width} x ${info.canvas.height} PX (${info.cols}x${info.rows})`;
+    }
+
+    function downloadSpriteSheet() {
+      const info = buildSpriteSheetCanvas();
+      if (!info) return;
+      triggerDownload(info.canvas.toDataURL('image/png'), `sprite_sheet_${info.frameW}x${info.frameH}_${info.count}f.png`);
+      showToast('SPRITE SHEET DOWNLOADED');
+    }
+
+    function downloadSequentialPNGs() {
+      if (state.frames.length === 0) return;
+      const exportScale = parseFloat(document.getElementById('sel-export-scale').value) || 1;
+
+      state.frames.forEach((f, i) => {
+        const fw = Math.max(1, Math.round(f.canvas.width * exportScale));
+        const fh = Math.max(1, Math.round(f.canvas.height * exportScale));
+        const tmp = document.createElement('canvas');
+        tmp.width = fw;
+        tmp.height = fh;
+        const ctx = tmp.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(f.canvas, 0, 0, fw, fh);
+
+        const num = String(i + 1).padStart(2, '0');
+        setTimeout(() => {
+          triggerDownload(tmp.toDataURL('image/png'), `sprite_frame_${num}.png`);
+        }, i * 180);
+      });
+      showToast(`EXPORTING ${state.frames.length} SEQUENTIAL PNGS`);
+    }
+
+    function triggerDownload(dataUrl, filename) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function generateIntegrationJSON() {
+      const info = buildSpriteSheetCanvas();
+      if (!info) return;
+      const payload = {
+        generator: 'PIXEL_SPRITE_FACTORY_V1',
+        frameWidth: info.frameW,
+        frameHeight: info.frameH,
+        frameCount: info.count,
+        columns: info.cols,
+        rows: info.rows,
+        recommendedFPS: state.fps,
+        frames: state.frames.map(f => f.label),
+        spriteSheetDataURL: info.canvas.toDataURL('image/png')
+      };
+      document.getElementById('export-json-box').value = JSON.stringify(payload, null, 2);
+      showToast('JSON PAYLOAD GENERATED');
+    }
+
+    function copyIntegrationJSON() {
+      const box = document.getElementById('export-json-box');
+      if (!box.value) {
+        generateIntegrationJSON();
+      }
+      box.select();
+      document.execCommand('copy');
+      showToast('JSON COPIED TO CLIPBOARD');
+    }
+  </script>
+</body>
+</html>
