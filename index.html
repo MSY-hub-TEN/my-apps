@@ -93,7 +93,18 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0.6;
       transition: opacity 0.2s ease, transform 0.15s ease;
+    }
+    #player-hud:hover,
+    #player-hud:focus-within,
+    #player-hud.is-dragging {
+      opacity: 1;
+    }
+    #player-hud.is-dragging {
+      transform: scale(1.1);
     }
 
     @keyframes modalFadeIn {
@@ -412,88 +423,19 @@
       allow="autoplay; fullscreen; clipboard-read; clipboard-write; microphone; camera; midi"
     ></iframe>
 
-    <!-- Translucent Draggable Floating Return Bar -->
-    <div
-      id="player-hud"
-      class="fixed z-50 flex items-center gap-0.5 p-1 rounded-full bg-zinc-950/65 hover:bg-zinc-950/90 text-white backdrop-blur-md border border-white/15 shadow-lg opacity-55 hover:opacity-100 focus-within:opacity-100"
-      style="top: calc(12px + var(--safe-top)); right: 12px;"
-    >
-      <div
-        id="hud-drag-handle"
-        title="ドラッグして位置を移動"
-        class="w-7 h-8 flex items-center justify-center cursor-grab active:cursor-grabbing text-zinc-400 hover:text-white rounded-full"
-      >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="9" cy="6" r="1.6"></circle>
-          <circle cx="15" cy="6" r="1.6"></circle>
-          <circle cx="9" cy="12" r="1.6"></circle>
-          <circle cx="15" cy="12" r="1.6"></circle>
-          <circle cx="9" cy="18" r="1.6"></circle>
-          <circle cx="15" cy="18" r="1.6"></circle>
-        </svg>
-      </div>
-
+    <!-- Floating Return Button -->
+    <div id="player-hud" class="fixed z-50" style="top: calc(12px + var(--safe-top)); left: calc(12px + var(--safe-left));">
       <button
         id="btn-player-back"
         type="button"
-        class="h-8 px-2.5 rounded-full hover:bg-white/15 active:bg-white/25 transition flex items-center gap-1.5 text-xs font-medium tracking-tight whitespace-nowrap"
+        title="一覧へ戻る（長押しで移動）"
+        aria-label="一覧へ戻る"
+        class="w-11 h-11 rounded-full bg-zinc-950/70 text-white backdrop-blur-md border border-white/15 shadow-lg flex items-center justify-center active:scale-95 transition"
       >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m15 18-6-6 6-6"></path>
         </svg>
-        <span>一覧へ戻る</span>
       </button>
-
-      <div class="w-px h-4 bg-white/15 mx-0.5"></div>
-
-      <button
-        id="btn-hud-more"
-        type="button"
-        title="プレイヤーメニュー"
-        class="w-8 h-8 rounded-full hover:bg-white/15 active:bg-white/25 transition flex items-center justify-center text-zinc-300 hover:text-white"
-      >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="1"></circle>
-          <circle cx="19" cy="12" r="1"></circle>
-          <circle cx="5" cy="12" r="1"></circle>
-        </svg>
-      </button>
-
-      <div id="hud-extra-actions" class="hidden items-center gap-0.5 pl-0.5 pr-1">
-        <button
-          id="btn-player-reload"
-          type="button"
-          title="アプリを再読み込み"
-          class="w-8 h-8 rounded-full hover:bg-white/15 transition flex items-center justify-center text-zinc-300 hover:text-white"
-        >
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-            <path d="M3 3v5h5"></path>
-          </svg>
-        </button>
-        <button
-          id="btn-player-edit"
-          type="button"
-          title="設定・コードを編集"
-          class="w-8 h-8 rounded-full hover:bg-white/15 transition flex items-center justify-center text-zinc-300 hover:text-white"
-        >
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
-          </svg>
-        </button>
-        <button
-          id="btn-player-newtab"
-          type="button"
-          title="別タブで開く"
-          class="w-8 h-8 rounded-full hover:bg-white/15 transition flex items-center justify-center text-zinc-300 hover:text-white"
-        >
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-            <polyline points="15 3 21 3 21 9"></polyline>
-            <line x1="10" y1="14" x2="21" y2="3"></line>
-          </svg>
-        </button>
-      </div>
     </div>
   </div>
 
@@ -2160,13 +2102,9 @@
 
         const overlay = document.getElementById('player-overlay');
         const frame = document.getElementById('player-frame');
-        const extra = document.getElementById('hud-extra-actions');
-
-        extra.classList.add('hidden');
-        extra.classList.remove('flex');
-
         overlay.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        applyHudPosition(app.id);
 
         if (app.source === 'github') {
           frame.removeAttribute('srcdoc');
@@ -2219,72 +2157,164 @@
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       }
 
-      function initDraggableHud() {
-        const hud = document.getElementById('player-hud');
-        const handle = document.getElementById('hud-drag-handle');
-        const frame = document.getElementById('player-frame');
+      const HUD_STORE_KEY = 'deck_hud_pos_v1';
+      const HUD_PAD = 8;
+      const HUD_LONGPRESS_MS = 350;
+      let hudSuppressClick = false;
 
-        let dragging = false;
-        let startX = 0, startY = 0;
-        let origLeft = 0, origTop = 0;
-
-        function clampPosition(left, top) {
-          const rect = hud.getBoundingClientRect();
-          const pad = 8;
-          const maxLeft = Math.max(pad, window.innerWidth - rect.width - pad);
-          const maxTop = Math.max(pad, window.innerHeight - rect.height - pad);
-          return {
-            left: Math.min(Math.max(pad, left), maxLeft),
-            top: Math.min(Math.max(pad, top), maxTop)
-          };
+      function loadHudPositions() {
+        try {
+          const raw = localStorage.getItem(HUD_STORE_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+          return {};
         }
-
-        handle.addEventListener('pointerdown', (e) => {
-          dragging = true;
-          handle.setPointerCapture(e.pointerId);
-          const rect = hud.getBoundingClientRect();
-          startX = e.clientX;
-          startY = e.clientY;
-          origLeft = rect.left;
-          origTop = rect.top;
-
-          hud.style.right = 'auto';
-          hud.style.left = rect.left + 'px';
-          hud.style.top = rect.top + 'px';
-          hud.style.opacity = '1';
-          frame.classList.add('pointer-events-none');
-        });
-
-        handle.addEventListener('pointermove', (e) => {
-          if (!dragging) return;
-          const next = clampPosition(origLeft + (e.clientX - startX), origTop + (e.clientY - startY));
-          hud.style.left = next.left + 'px';
-          hud.style.top = next.top + 'px';
-        });
-
-        function endDrag(e) {
-          if (!dragging) return;
-          dragging = false;
-          try {
-            handle.releasePointerCapture(e.pointerId);
-          } catch (err) {}
-          hud.style.opacity = '';
-          frame.classList.remove('pointer-events-none');
-        }
-
-        handle.addEventListener('pointerup', endDrag);
-        handle.addEventListener('pointercancel', endDrag);
-
-        window.addEventListener('resize', () => {
-          if (hud.style.left) {
-            const rect = hud.getBoundingClientRect();
-            const clamped = clampPosition(rect.left, rect.top);
-            hud.style.left = clamped.left + 'px';
-            hud.style.top = clamped.top + 'px';
-          }
-        });
       }
 
+      function saveHudPosition(appId, pos) {
+        try {
+          const all = loadHudPositions();
+          all[appId] = pos;
+          localStorage.setItem(HUD_STORE_KEY, JSON.stringify(all));
+        } catch (e) {}
+      }
+
+      function getSafeInsets() {
+        const probe = document.createElement('div');
+        probe.style.cssText =
+          'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;' +
+          'padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);';
+        document.body.appendChild(probe);
+        const cs = getComputedStyle(probe);
+        const insets = {
+          top: parseFloat(cs.paddingTop) || 0,
+          right: parseFloat(cs.paddingRight) || 0,
+          bottom: parseFloat(cs.paddingBottom) || 0,
+          left: parseFloat(cs.paddingLeft) || 0
+        };
+        probe.remove();
+        return insets;
+      }
+
+      function getHudBounds(hud) {
+        const s = getSafeInsets();
+        const rect = hud.getBoundingClientRect();
+        const minX = s.left + HUD_PAD;
+        const minY = s.top + HUD_PAD;
+        return {
+          minX,
+          minY,
+          maxX: Math.max(minX, window.innerWidth - rect.width - s.right - HUD_PAD),
+          maxY: Math.max(minY, window.innerHeight - rect.height - s.bottom - HUD_PAD)
+        };
+      }
+
+      function applyHudPosition(appId) {
+        const hud = document.getElementById('player-hud');
+        const saved = loadHudPositions()[appId];
+        hud.style.right = 'auto';
+        hud.style.bottom = 'auto';
+        if (saved && typeof saved.rx === 'number' && typeof saved.ry === 'number') {
+          const b = getHudBounds(hud);
+          const rx = Math.min(1, Math.max(0, saved.rx));
+          const ry = Math.min(1, Math.max(0, saved.ry));
+          hud.style.left = b.minX + rx * (b.maxX - b.minX) + 'px';
+          hud.style.top = b.minY + ry * (b.maxY - b.minY) + 'px';
+        } else {
+          hud.style.left = 'calc(12px + var(--safe-left))';
+          hud.style.top = 'calc(12px + var(--safe-top))';
+        }
+      }
+
+      function initDraggableHud() {
+        const hud = document.getElementById('player-hud');
+        const btn = document.getElementById('btn-player-back');
+        const frame = document.getElementById('player-frame');
+
+        let pressTimer = null;
+        let dragging = false;
+        let pointerId = null;
+        let startX = 0, startY = 0, origLeft = 0, origTop = 0;
+
+        function cancelPress() {
+          if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+          }
+        }
+
+        function startDrag() {
+          cancelPress();
+          if (dragging) return;
+          const rect = hud.getBoundingClientRect();
+          origLeft = rect.left;
+          origTop = rect.top;
+          dragging = true;
+          hudSuppressClick = true;
+          hud.classList.add('is-dragging');
+          frame.classList.add('pointer-events-none');
+          try { btn.setPointerCapture(pointerId); } catch (e) {}
+        }
+
+        btn.addEventListener('pointerdown', (e) => {
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          hudSuppressClick = false;
+          pointerId = e.pointerId;
+          startX = e.clientX;
+          startY = e.clientY;
+          cancelPress();
+          pressTimer = setTimeout(startDrag, HUD_LONGPRESS_MS);
+        });
+
+        btn.addEventListener('pointermove', (e) => {
+          if (e.pointerId !== pointerId) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          if (!dragging) {
+            if (Math.hypot(dx, dy) > 10) {
+              hudSuppressClick = true;
+              if (e.pointerType === 'mouse') startDrag();
+              else cancelPress();
+            }
+            if (!dragging) return;
+          }
+          const b = getHudBounds(hud);
+          hud.style.right = 'auto';
+          hud.style.bottom = 'auto';
+          hud.style.left = Math.min(b.maxX, Math.max(b.minX, origLeft + dx)) + 'px';
+          hud.style.top = Math.min(b.maxY, Math.max(b.minY, origTop + dy)) + 'px';
+        });
+
+        function endPress(e) {
+          if (e.pointerId !== pointerId) return;
+          cancelPress();
+          if (dragging) {
+            dragging = false;
+            try { btn.releasePointerCapture(e.pointerId); } catch (err) {}
+            hud.classList.remove('is-dragging');
+            frame.classList.remove('pointer-events-none');
+            if (State.runningApp) {
+              const b = getHudBounds(hud);
+              const rect = hud.getBoundingClientRect();
+              const ratio = (v, min, max) => (max - min > 0 ? (v - min) / (max - min) : 0);
+              saveHudPosition(State.runningApp.id, {
+                rx: ratio(rect.left, b.minX, b.maxX),
+                ry: ratio(rect.top, b.minY, b.maxY)
+              });
+            }
+          }
+          pointerId = null;
+        }
+
+        btn.addEventListener('pointerup', endPress);
+        btn.addEventListener('pointercancel', endPress);
+        btn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        window.addEventListener('resize', () => {
+          if (State.runningApp) applyHudPosition(State.runningApp.id);
+        });
+      }
       /* -------------------------------------------------------------------
        * 12. GitHub Card Customization Modal Controller
        * ------------------------------------------------------------------- */
@@ -2989,21 +3019,12 @@
         });
 
         // Player HUD controls
-        document.getElementById('btn-player-back').addEventListener('click', closePlayer);
-        document.getElementById('btn-hud-more').addEventListener('click', () => {
-          const extra = document.getElementById('hud-extra-actions');
-          const hidden = extra.classList.contains('hidden');
-          extra.classList.toggle('hidden', !hidden);
-          extra.classList.toggle('flex', hidden);
-        });
-        document.getElementById('btn-player-reload').addEventListener('click', reloadRunningApp);
-        document.getElementById('btn-player-newtab').addEventListener('click', openRunningAppInNewTab);
-        document.getElementById('btn-player-edit').addEventListener('click', () => {
-          const running = State.runningApp;
+        document.getElementById('btn-player-back').addEventListener('click', () => {
+          if (hudSuppressClick) {
+            hudSuppressClick = false;
+            return;
+          }
           closePlayer();
-          if (!running) return;
-          if (running.source === 'github') openGhMetaModal(running.filename);
-          else openEditorModal(running.id);
         });
 
         // Backup modal controls
